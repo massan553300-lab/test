@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>注意瞬き（Attentional Blink）実験</title>
+
+  <!-- jsPsych本体 -->
+  <script src="https://unpkg.com/jspsych@7.3.0"></script>
+  <!-- プラグイン -->
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+
+  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" />
+
+  <style>
+    body { background-color: white; }
+  </style>
+</head>
+<body></body>
+
+<script>
+// =============================
+// 初期化
+// =============================
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    jsPsych.data.displayData();
+  }
+});
+
+// =============================
+// 刺激
+// =============================
+const distractors = ["apple", "table", "green", "chair", "river", "stone", "cloud", "light"];
+const targets = ["DOG", "CAT"];
+
+// =============================
+// RSVP試行生成関数
+// =============================
+function createRSVPTrial(lag=3) {
+  let stream = [];
+  let length = 15;
+
+  // 妨害語ランダム配置
+  for (let i = 0; i < length; i++) {
+    stream.push(jsPsych.randomization.sampleWithoutReplacement(distractors, 1)[0]);
+  }
+
+  // ターゲット位置
+  let t1_pos = 5;
+  let t2_pos = t1_pos + lag;
+
+  stream[t1_pos] = targets[0];
+  if (t2_pos < length) {
+    stream[t2_pos] = targets[1];
+  }
+
+  let timeline = [];
+
+  // RSVP提示（100ms）
+  stream.forEach(word => {
+    timeline.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `<div style="font-size:40px">${word}</div>`,
+      choices: "NO_KEYS",
+      trial_duration: 100
+    });
+  });
+
+  // 応答（簡易）
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: "<p>見えたターゲット語を入力してください（例: DOG CAT）</p>",
+    choices: "ALL_KEYS",
+    data: { lag: lag, t1: targets[0], t2: targets[1] }
+  });
+
+  return { timeline: timeline };
+}
+
+// =============================
+// 実験タイムライン
+// =============================
+let timeline = [];
+
+// 説明
+ timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: "<p>単語が高速で表示されます。</p><p>大文字の単語（ターゲット）を覚えてください。</p><p>何かキーを押して開始</p>"
+});
+
+// lag条件
+[1,2,3,5].forEach(lag => {
+  timeline.push(createRSVPTrial(lag));
+});
+
+// =============================
+// 実行
+// =============================
+jsPsych.run(timeline);
+
+</script>
+</html>
