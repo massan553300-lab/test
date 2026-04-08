@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>評価条件づけ（Evaluative Conditioning）実験</title>
 
+  <!-- jsPsych本体 -->
+  <script src="https://unpkg.com/jspsych@7.3.0"></script>
+  <!-- プラグイン -->
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.2"></script>
+
+  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" />
+
+  <style>
+    body { background-color: white; }
+    .stim { font-size: 42px; }
+  </style>
+</head>
+<body></body>
+
+<script>
+// =====================================
+// 初期化
+// =====================================
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    jsPsych.data.displayData();
+  }
+});
+
+// =====================================
+// 刺激定義
+// =====================================
+// CS（中性刺激：架空語）
+const CS_positive = ["LUMI", "NARO"];   // ポジティブと対提示
+const CS_negative = ["BEXO", "KAPI"];   // ネガティブと対提示
+
+// US（無条件刺激）
+const US_positive = ["HAPPY", "SMILE", "LOVE"];
+const US_negative = ["PAIN", "ANGER", "SAD"];
+
+// 評価尺度
+const likert_scale = ["1 とても嫌い", "2", "3", "4", "5", "6", "7 とても好き"];
+
+// =====================================
+// 試行生成関数（CS→US提示）
+// =====================================
+function createPairTrial(cs, us, valence) {
+  return {
+    timeline: [
+      {
+        type: jsPsychHtmlKeybo
