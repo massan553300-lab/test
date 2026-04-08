@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attentional Blink Task</title>
+
+  <!-- jsPsych v8 -->
+  <script src="https://unpkg.com/jspsych@8.2.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-text@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-fullscreen@2.1.0"></script>
+
+  <link href="https://unpkg.com/jspsych@8.2.3/css/jspsych.css" rel="stylesheet" />
+
+  <style>
+    body {
+      background: #ffffff;
+    }
+    .rsvp-stim {
+      font-size: 48px;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      text-align: center;
+      line-height: 1;
+    }
+    .fixation {
+      font-size: 48px;
+      text-align: center;
+    }
+    .instruction {
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.8;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body></body>
+
+<script>
+  // =========================
+  // 0. jsPsych 初期化
+  // =========================
+  const jsPsych = initJsPsych({
+    on_finish: function() {
+      // 必要に応じて保存処理へ変更
+      jsPsych.data.displayData("csv");
+    }
+  });
+
+  const timeline = [];
+
+  // =========================
+  // 1. パラメータ
+  // =========================
+  const LETTER_SET = "ACDEFGHJKLMNPRTUVWXYZ".split(""); // B, I, O, Q, S は除外
+  const DIGIT_SET = ["2","3","4","5","6","7","8","9"];
+
+  const N_TRIALS_PER_LAG = 10;
+  const LAGS = [1, 2, 3, 7];   // 例：lag 1,2,3,7
+  const STREAM_MIN = 13;
+  const STREAM_MAX = 17;
+
+  const STIM_DURATION = 50;    // ms
+  const BLANK_DURATION = 34;   // ms
+  const FIXATION_DURATION = 500;
+
+  // =========================
+  // 2. 補助関数
+  // =========================
+  function sampleOne(arr) {
+    return jsPsych.randomization.sampleWithoutReplacement(arr, 1)[0];
+  }
+
+  function sampleManyWithoutReplacement(arr, n) {
+    return jsPsych.randomization.sampleWithoutReplacement(arr, n);
+  }
+
+  function shuffle(arr) {
+    return jsPsych.randomization.shuffle(arr);
+  }
+
+  function randint(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  // 文字列をHTML化
+  function makeStimHTML(char) {
+    return `<div class="rsvp-stim">${char}</div>`;
+  }
+
+  function makeBlankHTML() {
+    return `<div class="rsvp-stim">&nbsp;</div>`;
+  }
+
+  // =========================
+  // 3. 1試行分の RSVP 列を生成
+  // =========================
+  function generateABTrial(lag) {
+    const streamLength = randint(STREAM_MIN, STREAM_MAX);
+
+    // T1位置は、T2が入る余地を残して決める
+    // 0-indexed
+    const maxT1Pos = streamLength - lag - 2; 
+    const t1Pos = randint(2, maxT1Pos); 
+    const t2Pos = t1Pos + lag;
+
+    const t1 = sampleOne(DIGIT_SET);
+    let t2Pool = DIGIT_SET.filter(d => d !== t1);
+    const t2 = sampleOne(t2Pool);
+
+    // まず全部文字で埋める
+    let stream = [];
+    for (let i = 0; i < streamLength; i++) {
+      stream.push(sampleOne(LETTER_SET));
+    }
+
+    // ターゲット埋め込み
+    stream[t1Pos] = t1;
+    stream[t2Pos] = t2;
+
+    return {
+      streamLength,
+      t1Pos,
+      t2Pos,
+      lag,
+      t1,
+      t2,
+      stream
+    };
+  }
+
+  // =========================
+  // 4. 1試行を jsPsych timeline に変換
+  // =========================
+  function buildTrialTimeline(trialInfo, trialIndex) {
+    const trialTimeline = [];
+
+    // fixation
+    trialTimeline.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: '<div class="fixation">+</div>',
+      choices: "NO_KEYS",
+      trial_duration: FIXATION_DURATION,
+      data: {
+        phase: "fixation",
+        trial_index_custom: trialIndex,
+        lag: trialInfo.lag
+      }
+    });
+
+    // RSVP stream
+    for (let i = 0; i < trialInfo.stream.length; i++) {
+      const item = trialInfo.stream[i];
+
+      // item
+      trialTimeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: makeStimHTML(item),
+        choices: "NO_KEYS",
+        trial_duration: STIM_DURATION,
+        data: {
+          phase: "stream_item",
+          trial_index_custom: trialIndex,
+          serial_position: i,
+          item: item,
+          is_t1: i === trialInfo.t1Pos,
+          is_t2: i === trialInfo.t2Pos,
+          lag: trialInfo.lag,
+          t1: trialInfo.t1,
+          t2: trialInfo.t2,
+          t1_pos: trialInfo.t1Pos,
+          t2_pos: trialInfo.t2Pos,
+          stream_length: trialInfo.streamLength
+        }
+      });
+
+      // blank
+      trialTimeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: makeBlankHTML(),
+        choices: "NO_KEYS",
+        trial_duration: BLANK_DURATION,
+        data: {
+          phase: "blank",
+          trial_index_custom: trialIndex,
+          serial_position: i,
+          lag: trialInfo.lag
+        }
+      });
+    }
+
+    // report
+    trialTimeline.push({
+      type: jsPsychSurveyText,
+      preamble: `
+        <div class="instruction">
+          <p>見えた数字を順番に入力してください。</p>
+          <p>わからない場合は空欄でも構いません。</p>
+        </div>
+      `,
+      questions: [
+        { prompt: "1つ目の数字 (T1)", name: "resp_t1", required: false },
+        { prompt: "2つ目の数字 (T2)", name: "resp_t2", required: false }
+      ],
+      data: {
+        phase: "report",
+        trial_index_custom: trialIndex,
+        lag: trialInfo.lag,
+        t1: trialInfo.t1,
+        t2: trialInfo.t2,
+        t1_pos: trialInfo.t1Pos,
+        t2_pos: trialInfo.t2Pos,
+        stream_length: trialInfo.streamLength,
+        full_stream: JSON.stringify(trialInfo.stream)
+      },
+      on_finish: function(data) {
+        const resp = JSON.parse(data.response || "{}");
+        const respT1 = (resp.resp_t1 || "").trim();
+        const respT2 = (resp.resp_t2 || "").trim();
+
+        data.resp_t1 = respT1;
+        data.resp_t2 = respT2;
+        data.correct_t1 = Number(respT1 === data.t1);
+        data.correct_t2 = Number(respT2 === data.t2);
+        data.t2_given_t1 = Number((respT1 === data.t1) && (respT2 === data.t2));
+      }
+    });
+
+    return trialTimeline;
+  }
+
+  // =========================
+  // 5. 教示
+  // =========================
+  timeline.push({
+    type: jsPsychFullscreen,
+    fullscreen_mode: true
+  });
+
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <div class="instruction">
+        <h2>Attentional Blink Task</h2>
+        <p>画面中央に文字列が高速で提示されます。</p>
+        <p>その中に <strong>2つの数字</strong> が含まれます。</p>
+        <p>数字を見つけて、最後に <strong>順番通り</strong> に報告してください。</p>
+        <p>スペースキーで開始します。</p>
+      </div>
+    `,
+    choices: [" "]
+  });
+
+  // =========================
+  // 6. 試行リスト作成
+  // =========================
+  let conditions = [];
+  LAGS.forEach(lag => {
+    for (let i = 0; i < N_TRIALS_PER_LAG; i++) {
+      conditions.push({ lag });
+    }
+  });
+  conditions = shuffle(conditions);
+
+  conditions.forEach((cond, idx) => {
+    const trialInfo = generateABTrial(cond.lag);
+    const oneTrialTimeline = buildTrialTimeline(trialInfo, idx + 1);
+    timeline.push(...oneTrialTimeline);
+  });
+
+  // =========================
+  // 7. 終了画面
+  // =========================
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: function() {
+      const reports = jsPsych.data.get().filter({ phase: "report" });
+      const meanT1 = reports.select("correct_t1").mean();
+      const meanT2 = reports.select("correct_t2").mean();
+      const meanT2GivenT1 = reports.select("t2_given_t1").mean();
+
+      return `
+        <div class="instruction">
+          <h2>終了</h2>
+          <p>T1正答率: ${(meanT1 * 100).toFixed(1)}%</p>
+          <p>T2正答率: ${(meanT2 * 100).toFixed(1)}%</p>
+          <p>T2|T1正答率: ${(meanT2GivenT1 * 100).toFixed(1)}%</p>
+          <p>キーを押すとデータ表示に進みます。</p>
+        </div>
+      `;
+    }
+  });
+
+  // =========================
+  // 8. 実行
+  // =========================
+  jsPsych.run(timeline);
+</script>
+</html>
