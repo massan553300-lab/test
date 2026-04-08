@@ -2,15 +2,16 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>評価条件づけ（Evaluative Conditioning）実験</title>
+  <title>評価条件づけ（ローカル対応版）</title>
 
-  <!-- jsPsych本体 -->
-  <script src="https://unpkg.com/jspsych@7.3.0"></script>
-  <!-- プラグイン -->
-  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.2"></script>
+  <!-- ★重要：ローカルにダウンロードしたjsPsychを使用 -->
+  <!-- 同じフォルダに以下を配置してください -->
+  <!-- jspsych.js / plugin-html-keyboard-response.js / plugin-survey-likert.js / jspsych.css -->
 
-  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" />
+  <script src="jspsych.js"></script>
+  <script src="plugin-html-keyboard-response.js"></script>
+  <script src="plugin-survey-likert.js"></script>
+  <link href="jspsych.css" rel="stylesheet" />
 
   <style>
     body { background-color: white; }
@@ -20,34 +21,97 @@
 <body></body>
 
 <script>
-// =====================================
-// 初期化
-// =====================================
 const jsPsych = initJsPsych({
   on_finish: function() {
     jsPsych.data.displayData();
   }
 });
 
-// =====================================
-// 刺激定義
-// =====================================
-// CS（中性刺激：架空語）
-const CS_positive = ["LUMI", "NARO"];   // ポジティブと対提示
-const CS_negative = ["BEXO", "KAPI"];   // ネガティブと対提示
+// ===== 刺激 =====
+const CS_positive = ["LUMI", "NARO"];
+const CS_negative = ["BEXO", "KAPI"];
 
-// US（無条件刺激）
 const US_positive = ["HAPPY", "SMILE", "LOVE"];
 const US_negative = ["PAIN", "ANGER", "SAD"];
 
-// 評価尺度
-const likert_scale = ["1 とても嫌い", "2", "3", "4", "5", "6", "7 とても好き"];
+const likert_scale = ["1 嫌い", "2", "3", "4", "5", "6", "7 好き"];
 
-// =====================================
-// 試行生成関数（CS→US提示）
-// =====================================
+// ===== 試行 =====
 function createPairTrial(cs, us, valence) {
   return {
     timeline: [
       {
-        type: jsPsychHtmlKeybo
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<div class="stim">${cs}</div>`,
+        choices: "NO_KEYS",
+        trial_duration: 500
+      },
+      {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<div class="stim">${us}</div>`,
+        choices: "NO_KEYS",
+        trial_duration: 500
+      }
+    ],
+    data: { cs, us, valence }
+  };
+}
+
+let conditioning_trials = [];
+let repetitions = 5;
+
+for (let r = 0; r < repetitions; r++) {
+  CS_positive.forEach(cs => {
+    let us = jsPsych.randomization.sampleWithoutReplacement(US_positive, 1)[0];
+    conditioning_trials.push(createPairTrial(cs, us, "positive"));
+  });
+
+  CS_negative.forEach(cs => {
+    let us = jsPsych.randomization.sampleWithoutReplacement(US_negative, 1)[0];
+    conditioning_trials.push(createPairTrial(cs, us, "negative"));
+  });
+}
+
+conditioning_trials = jsPsych.randomization.shuffle(conditioning_trials);
+
+// ===== 評価 =====
+function createRatingTrial(cs) {
+  return {
+    type: jsPsychSurveyLikert,
+    questions: [
+      {
+        prompt: `${cs} の印象を評価してください`,
+        labels: likert_scale,
+        required: true
+      }
+    ],
+    data: { cs }
+  };
+}
+
+let rating_trials = [];
+[...CS_positive, ...CS_negative].forEach(cs => {
+  rating_trials.push(createRatingTrial(cs));
+});
+
+// ===== タイムライン =====
+let timeline = [];
+
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: "<p>単語が2つずつ表示されます。</p><p>そのまま見てください。</p><p>キーで開始</p>"
+});
+
+timeline = timeline.concat(conditioning_trials);
+
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: "<p>次に評価を行います</p><p>キーで開始</p>"
+});
+
+timeline = timeline.concat(rating_trials);
+
+jsPsych.run(timeline);
+</script>
+</html>
+
