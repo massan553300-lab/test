@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Global-Local Task</title>
+  <script src="https://unpkg.com/jspsych@7.3.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.0"></script>
+  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" />
+  <style>
+    body { background-color: white; }
+    .stimulus { font-size: 60px; text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body></body>
+<script>
+
+// 初期化
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    jsPsych.data.displayData();
+  }
+});
+
+// グローバル・ローカル刺激（例：大きな文字が小さな文字で構成）
+function createStimulus(globalLetter, localLetter) {
+  let rows = 5;
+  let cols = 5;
+  let html = '<div class="stimulus">';
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      html += localLetter + ' ';
+    }
+    html += '<br>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// 刺激リスト
+const stimuli = [
+  {global: 'H', local: 'S'},
+  {global: 'S', local: 'H'},
+  {global: 'H', local: 'H'},
+  {global: 'S', local: 'S'}
+];
+
+// 試行生成（100ms提示）
+let trials = [];
+
+stimuli.forEach(stim => {
+  trials.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: createStimulus(stim.global, stim.local),
+    choices: "NO_KEYS",
+    trial_duration: 100,
+    data: stim
+  });
+
+  // 空白画面（インターバル）
+  trials.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '',
+    choices: "NO_KEYS",
+    trial_duration: 500
+  });
+});
+
+// 指示
+const instruction = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<p>大きい文字（グローバル）を判断してください。<br>HならFキー、SならJキーを押してください。<br><br>スペースキーで開始</p>',
+  choices: [' ']
+};
+
+// 反応付き試行（100ms提示後に反応待ち）
+function createResponseTrial(stim) {
+  return {
+    timeline: [
+      {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: createStimulus(stim.global, stim.local),
+        choices: "NO_KEYS",
+        trial_duration: 100
+      },
+      {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="stimulus">?</div>',
+        choices: ['f', 'j'],
+        data: stim,
+        on_finish: function(data) {
+          data.correct = (data.response === 'f' && stim.global === 'H') ||
+                         (data.response === 'j' && stim.global === 'S');
+        }
+      }
+    ]
+  };
+}
+
+let main_trials = stimuli.map(s => createResponseTrial(s));
+
+// 実験タイムライン
+jsPsych.run([
+  instruction,
+  ...main_trials
+]);
+
+</script>
+</html>
