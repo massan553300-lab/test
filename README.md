@@ -4,3 +4,4 @@
 2. グローバルローカルテスト: https://massan553300-lab.github.io/test/global_local.html
 3. 注意瞬き: https://massan553300-lab.github.io/test/attentional_blink.html
 4. 注意瞬き ver2: https://massan553300-lab.github.io/test/attentional_blink2.html
+5. BCT: https://massan553300-lab.github.io/test/bct_jspsych.html
