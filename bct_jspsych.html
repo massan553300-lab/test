@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Breath Counting Task - jsPsych</title>
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+  <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" />
+  <style>
+    body { background: #000; color: #fff; }
+    .jspsych-display-element { background: #000; color: #fff; }
+    .bct-text {
+      font-size: 28px;
+      line-height: 1.55;
+      white-space: pre-line;
+      max-width: 950px;
+      margin: 0 auto;
+    }
+    .bct-small { font-size: 18px; opacity: 0.8; margin-top: 24px; }
+  </style>
+</head>
+<body></body>
+<script>
+/*
+  Breath Counting Task (BCT) - jsPsych version
+  Converted from a MATLAB/Psychtoolbox BCT script based on Levinson (2014)
+  and Wong, Massar, Chee, & Lim (2018).
+
+  Default key mapping follows the MATLAB script:
+    LeftArrow  = breaths 1-8
+    RightArrow = breath 9 / continue instruction pages
+    Space      = loss of count / start task
+    Escape     = experimenter quit / finish end screen
+
+  Output:
+    1. Raw keypresses: time, resp, count
+       resp: 1 = count 1-8, 2 = count 9, 3 = reset/loss of count
+    2. Cycle-level scoring:
+       accuracy_code: 1 = accurate, 2 = miscount, 3 = reset
+*/
+
+// ======================
+// Experiment parameters
+// ======================
+const EXP_CONFIG = {
+  subjectNumber: prompt('参加者番号を入力してください（例: 1）', '1') || '1',
+  saveCode: prompt('保存用コードを入力してください（例: BCT）', 'BCT') || 'BCT',
+  durationMinutes: Number(prompt('課題時間を分単位で入力してください（例: 20）', '20')) || 20,
+  syncSomno: confirm('3秒カウントダウンを使用しますか？\nOK = 使用する / キャンセル = 使用しない'),
+  keys: {
+    count18: 'ArrowLeft',
+    count9: 'ArrowRight',
+    reset: ' ',
+    continue: 'ArrowRight',
+    start: ' ',
+    quit: 'Escape'
+  }
+};
+
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    const results = scoreBCT(rawData);
+    const timestamp = makeTimestamp();
+    const sub = String(EXP_CONFIG.subjectNumber).padStart(3, '0');
+    const baseName = `BCT_${EXP_CONFIG.saveCode}_S${sub}_${timestamp}`;
+
+    downloadText(`${baseName}_raw.csv`, toCSV(rawData, ['time', 'resp', 'count']));
+    downloadText(`${baseName}_cycles.csv`, toCSV(results.cycles, [
+      'cycle', 'start_keypress_index', 'end_keypress_index', 'n_presses',
+      'termination_key', 'termination_time', 'mean_keypress_interval', 'accuracy_code'
+    ]));
+    downloadText(`${baseName}_summary.json`, JSON.stringify(results.summary, null, 2));
+  }
+});
+
+const timeline = [];
+const rawData = [];
+let taskStartTime = null;
+let taskEndedByEscape = false;
+
+function instructionPage(text, key = EXP_CONFIG.keys.continue) {
+  return {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<div class="bct-text">${escapeHTML(text)}</div>`,
+    choices: [key, EXP_CONFIG.keys.quit],
+    on_finish: function(data) {
+      if (data.response === EXP_CONFIG.keys.quit) {
+        taskEndedByEscape = true;
+        jsPsych.endExperiment('Experimenter Quit');
+      }
+    }
+  };
+}
+
+const instruction1 = `In this task,\nwe would like you to be aware of your breath.\n\nPlease be aware of the movement of breath in and out\nin the space below your nose and above your upper lip.\n\nThere's no need to control the breath.\n\nJust breathe normally.\n\n\nPress the <Right Arrow> to continue.`;
+
+const instruction2 = `At some point,\nyou may notice your attention has wandered\nfrom the breath.\n\nThat's okay.\nJust gently place it back on the breath.\n\n\nPress the <Right Arrow> to continue`;
+
+const instruction3 = `To help attention stay with the breath,\nyou'll use a small part of your attention to\nsilently count breaths from 1 to 9, again and again.\n\nAn in and out breath together makes one count.\n\nSay the count softly in your mind so it only gets\na little attention while most of the attention is on feeling the breath.\n\nPlease press the <Left Arrow> using your index finger with breaths 1-8,\nand the <Right Arrow> using your 4th finger with breath 9.\n\nThis means you'll be pressing a button with each breath.\n\n\nPress the <Right Arrow> to continue`;
+
+const instruction4 = `If you find that you have forgotten the count,\n\njust press the <SPACE> with your Left index finger.\n\nYou can restart the count at 1 with the next breath.\n\nDo not count the breaths using your fingers but only in your head.\n\nPress the <Right Arrow> to continue.`;
+
+const instruction5 = EXP_CONFIG.syncSomno
+  ? `We suggest you sit in an upright, relaxed posture that feels comfortable.\n\nPlease keep your eyes at least partly open\nand resting on the screen during the experiment.\n\nThe task will last about ${EXP_CONFIG.durationMinutes} minutes\n\n\nPress <Space> to continue`
+  : `We suggest you sit in an upright, relaxed posture that feels comfortable.\n\nPlease keep your eyes at least partly open\nand resting on the screen during the experiment.\n\nThe task will last about ${EXP_CONFIG.durationMinutes} minutes\n\n\nPress <Space> start`;
+
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<div class="bct-text">Please wait\nSetting up</div>',
+  choices: 'NO_KEYS',
+  trial_duration: 800
+});
+
+timeline.push(instructionPage(instruction1));
+timeline.push(instructionPage(instruction2));
+timeline.push(instructionPage(instruction3));
+timeline.push(instructionPage(instruction4));
+timeline.push(instructionPage(instruction5, EXP_CONFIG.keys.start));
+
+if (EXP_CONFIG.syncSomno) {
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<div class="bct-text">Breathe in and press Space to begin\n3 second countdown</div>',
+    choices: [EXP_CONFIG.keys.start, EXP_CONFIG.keys.quit],
+    on_finish: function(data) {
+      if (data.response === EXP_CONFIG.keys.quit) {
+        taskEndedByEscape = true;
+        jsPsych.endExperiment('Experimenter Quit');
+      }
+    }
+  });
+
+  [3, 2, 1].forEach(function(n) {
+    timeline.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `<div class="bct-text">Exhale\n\n${n}</div>`,
+      choices: 'NO_KEYS',
+      trial_duration: 1000
+    });
+  });
+}
+
+timeline.push({
+  type: jsPsychCallFunction,
+  func: function() {
+    taskStartTime = performance.now();
+  }
+});
+
+// Main task trial: blank black screen, records every valid keypress until duration expires.
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<div></div>',
+  choices: 'NO_KEYS',
+  trial_duration: EXP_CONFIG.durationMinutes * 60 * 1000,
+  on_load: function() {
+    const validKeys = [
+      EXP_CONFIG.keys.count18,
+      EXP_CONFIG.keys.count9,
+      EXP_CONFIG.keys.reset,
+      EXP_CONFIG.keys.quit
+    ];
+
+    const handler = function(e) {
+      if (!validKeys.includes(e.key)) return;
+      e.preventDefault();
+
+      if (e.key === EXP_CONFIG.keys.quit) {
+        taskEndedByEscape = true;
+        document.removeEventListener('keydown', handler);
+        jsPsych.finishTrial();
+        return;
+      }
+
+      const resp = e.key === EXP_CONFIG.keys.count18 ? 1
+        : e.key === EXP_CONFIG.keys.count9 ? 2
+        : e.key === EXP_CONFIG.keys.reset ? 3
+        : null;
+
+      if (resp === null) return;
+
+      const timeSec = (performance.now() - taskStartTime) / 1000;
+      let count = 1;
+      if (rawData.length > 0) {
+        const prev = rawData[rawData.length - 1];
+        count = prev.resp === 1 ? prev.count + 1 : 1;
+      }
+
+      rawData.push({
+        time: Number(timeSec.toFixed(4)),
+        resp: resp,
+        count: count
+      });
+      console.log(`${timeSec.toFixed(3)} | ${resp} | ${count}`);
+    };
+
+    document.addEventListener('keydown', handler);
+    jsPsych.getCurrentTrial()._bctHandler = handler;
+  },
+  on_finish: function() {
+    const handler = jsPsych.getCurrentTrial()._bctHandler;
+    if (handler) document.removeEventListener('keydown', handler);
+    if (taskEndedByEscape) jsPsych.endExperiment('Experimenter Quit');
+  }
+});
+
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<div class="bct-text">End of Task\n\n\nPlease inform the experimenter.\n\n<span class="bct-small">Press Escape to save and finish.</span></div>',
+  choices: [EXP_CONFIG.keys.quit]
+});
+
+jsPsych.run(timeline);
+
+// ======================
+// Scoring functions
+// ======================
+function scoreBCT(data) {
+  let cycles = [];
+  const endIndices = [];
+  data.forEach((row, idx) => {
+    if (row.resp === 2 || row.resp === 3) {
+      endIndices.push({ index: idx, terminationKey: row.resp });
+    }
+  });
+
+  endIndices.forEach((end, i) => {
+    const startIndex = i === 0 ? 0 : endIndices[i - 1].index + 1;
+    const endIndex = end.index;
+    const nPresses = endIndex - startIndex + 1;
+    const terminationTime = data[endIndex].time;
+    const previousTime = i === 0 ? 0 : data[startIndex - 1].time;
+    const meanInterval = (terminationTime - previousTime) / nPresses;
+
+    cycles.push({
+      cycle: i + 1,
+      start_keypress_index: startIndex + 1,
+      end_keypress_index: endIndex + 1,
+      n_presses: nPresses,
+      termination_key: end.terminationKey,
+      termination_time: Number(terminationTime.toFixed(4)),
+      mean_keypress_interval: Number(meanInterval.toFixed(4)),
+      accuracy_code: null
+    });
+  });
+
+  // MATLAB版に合わせて、1回押しのみの周期を除外。
+  // 元コードでは「1回押し周期」は実質的に全て除外される条件になっています。
+  const singlesRemovedDetailed = cycles.filter(c => c.n_presses === 1 && c.mean_keypress_interval < Math.max(...data.map(d => d.time), 0));
+  cycles = cycles.filter(c => !(c.n_presses === 1 && c.mean_keypress_interval < Math.max(...data.map(d => d.time), 0)));
+  cycles.forEach((c, i) => c.cycle = i + 1);
+
+  cycles.forEach(c => {
+    if (c.n_presses === 9 && c.termination_key === 2) c.accuracy_code = 1;
+    else if (c.n_presses !== 9 && c.termination_key === 2) c.accuracy_code = 2;
+    else if (c.termination_key === 3) c.accuracy_code = 3;
+  });
+
+  const numberAcc = cycles.filter(c => c.accuracy_code === 1).length;
+  const numberMis = cycles.filter(c => c.accuracy_code === 2).length;
+  const numberRes = cycles.filter(c => c.accuracy_code === 3).length;
+  const totalTrials = cycles.length;
+
+  const summary = {
+    subjectNumber: EXP_CONFIG.subjectNumber,
+    saveCode: EXP_CONFIG.saveCode,
+    durationMinutes: EXP_CONFIG.durationMinutes,
+    total_keypresses: data.length,
+    singlesremoved: singlesRemovedDetailed.length,
+    totaltrials: totalTrials,
+    number_acc: numberAcc,
+    number_mis: numberMis,
+    number_res: numberRes,
+    accuracy_rate: totalTrials > 0 ? numberAcc / totalTrials : null,
+    miscount_rate: totalTrials > 0 ? numberMis / totalTrials : null,
+    reset_rate: totalTrials > 0 ? numberRes / totalTrials : null,
+    manualcheck_required: (numberAcc + numberMis + numberRes) !== totalTrials ? 1 : 0,
+    key_mapping: EXP_CONFIG.keys,
+    taskEndedByEscape: taskEndedByEscape
+  };
+
+  return { cycles, summary, singlesRemovedDetailed };
+}
+
+// ======================
+// Utility functions
+// ======================
+function toCSV(rows, columns) {
+  const header = columns.join(',');
+  const body = rows.map(row => columns.map(col => csvEscape(row[col])).join(',')).join('\n');
+  return `${header}\n${body}`;
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+  return str;
+}
+
+function downloadText(filename, text) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function makeTimestamp() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>
+</html>
