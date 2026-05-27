@@ -1,0 +1,597 @@
+var jsPsych = initJsPsych();
+
+let current_trial_index = 0;
+Canvaswidth = 1500;
+Canvasheight = 1000;
+
+colour_set_black = [0, 0, 0]
+colour_set_white_left = [0, 0, 255]
+colour_set_white_right = [0, 255, 0]
+colour_set_white_center = [255,0,0]
+//colour_set = [colour_set_black, colour_set_white_left, colour_set_white_right]
+//angle_set = [0, 90, 180, 270]
+
+
+// ウィンドウサイズの最大化 --------------------------------------------------------------
+var start_fullscreen = {
+  type: jsPsychFullscreen,
+  message: '<p>ウィンドウサイズを最大化します。下のボタンを押してください。</p>',
+  button_label: '次へ',
+  fullscreen_mode: true,
+  data: {
+    task: 'instruction'
+  },
+};
+//最大化の解除
+var end_fullscreen = {
+  type: jsPsychFullscreen,
+  fullscreen_mode: false,
+  data: {
+    task: 'instruction'
+  },
+};
+
+// 実験参加者の情報 --------------------------------------------------------
+var par_info = {
+  type: jsPsychSurveyText,
+  questions: [{
+    prompt: '参加者IDを入力してください',
+    columns: 10,
+    required: true,
+    name: 'participantID'
+  },
+  ],
+  button_label: '次へ',
+};
+
+
+var get_par_info = {
+  timeline: [par_info],
+};
+
+// 教示
+const instruction_before_practice_first = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus:
+  '実験1では、モニターに線が3本表示されます。<br>'+
+  '線の内1本の長さを調整することができます。<br>'+
+  '長さを変更できる線が他の2本線の平均の長さになるように長さの調整を行ってください。<br>'+
+  '線は「j」キーで長く、「k」キーで短くなります。<br>'+
+  '調整が終わったら「スペースキー」を押し、次の試行に進んでください。<br>'+
+  '試行数は32です。<br>'+
+  '何か質問があれば、実験者にお尋ねください。<br>' +
+  '準備ができましたら、練習を始めます。「次へ」を押してください。',
+  canvas_size: [Canvaswidth,
+    Canvasheight],
+  choices: ['次へ'],
+  data: {
+    task: 'instruction'
+  },
+};
+
+start_plactice_first = {
+  timeline: [get_par_info,instruction_before_practice_first]
+}
+
+const blanck = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<p> </p>',
+  choices: [' '],
+  // どのキー入力も受け付けない
+  data: {
+    task: 'blank'
+  },
+  trial_duration: 500,
+};
+
+function experiment_plactice_first(p) {
+  // おまじない
+  let trial = jsPsych.getCurrentTrial();
+  // これはタイムラインのデータを拾う（使い方はjsPsychのサイトを参照）。
+  let angle = jsPsych.timelineVariable("angle", true);
+  let colour = jsPsych.timelineVariable("colour", true);
+
+
+  p.setup = function () {
+    //刺激のデータ
+    trial.data.angle = angle
+    trial.data.colour = colour
+    
+    p.createCanvas(Canvaswidth,Canvasheight);
+    start_length = p.random(-20,20)
+    effect_size = start_length
+    line_length = 150*1.5
+    line_depart = 100*1.5
+    p.angle = angle/90
+    nw0 = p.millis();
+    p.noCursor()
+  }
+
+  p.draw = function() {
+    p.background(220);
+    line_length_set = [line_length+effect_size,
+      line_length,
+      line_length]
+    p.strokeWeight(4)
+    p.translate(p.width/2, p.height/2)
+    p.push()
+    p.rotate(p.PI*2/4*p.angle)
+    for (i = 0; i < 3; i++) {
+      p.push()
+      p.rotate(p.PI*2/3*i)
+      p.stroke(colour[i])
+      p.line(-line_length_set[i]/2, line_depart, line_length_set[i]/2, line_depart)
+      p.pop()
+    }
+    p.pop()
+
+    if (p.keyIsPressed) {
+      if (p.key == 'j') {
+        effect_size++
+      }
+      if (p.key == 'k') {
+        effect_size--
+      }
+    }
+  }
+  p.keyTyped = function() {
+    if (p.key === ' ') {
+      trial.data.start_length = start_length
+      trial.data.effect_size = effect_size
+      trial.data.rt = p.millis() - nw0;
+      trial.end_trial();
+    };
+  };
+};
+
+const instruction_after_practice = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus:
+  'それでは本試行にうつります',
+  canvas_size: [Canvaswidth,
+    Canvasheight],
+  choices: ['次へ'],
+  data: {
+    task: 'instruction'
+  },
+};
+
+let p5_trial_experiment_plactice_first = {
+  type: jsPsychP5,
+  sketch: experiment_plactice_first,
+  // このトライアル用のスケッチ（関数）を指定
+  data: {
+    task: 'plactice_first',
+  }
+}
+
+let plactice_factors = {
+  colour:[colour_set_black, colour_set_white_right],
+  angle:[180, 90,]
+}
+
+let stimulus_plactice = jsPsych.randomization.factorial(plactice_factors,1)
+
+let trial_experiment_plactice_first = {
+  timeline: [blanck,
+    p5_trial_experiment_plactice_first,
+    blanck],
+  //刺激条件を代入
+  timeline_variables: stimulus_plactice,
+  repetitions: 1,
+  //繰り返しの数
+  //randomize_order: true,
+  //ランダム化するか否か
+};
+
+start_experiment = {
+  timeline: [instruction_after_practice]
+}
+
+function experiment_first(p) {
+  // おまじない
+  let trial = jsPsych.getCurrentTrial();
+  // これはタイムラインのデータを拾う（使い方はjsPsychのサイトを参照）。
+  let angle = jsPsych.timelineVariable("angle", true);
+  let colour = jsPsych.timelineVariable("colour", true);
+
+
+  p.setup = function () {
+    //刺激のデータ
+    trial.data.angle = angle,
+    trial.data.colour = colour
+
+　　console.log(stimulus_list_second)
+    p.createCanvas(Canvaswidth,Canvasheight);
+    start_length = p.random(-20,20)
+    effect_size = start_length
+    line_length = 150*1.5
+    line_depart = 100*1.5
+    p.angle = angle/90
+    nw0 = p.millis();
+    p.noCursor()
+  }
+
+  p.draw = function() {
+    p.background(220);
+    line_length_set = [line_length+effect_size,
+      line_length,
+      line_length]
+    p.strokeWeight(4)
+    p.translate(p.width/2, p.height/2)
+    p.push()
+    p.rotate(p.PI*2/4*p.angle)
+    for (i = 0; i < 3; i++) {
+      p.push()
+      p.rotate(p.PI*2/3*i)
+      p.stroke(colour[i])
+      p.line(-line_length_set[i]/2, line_depart, line_length_set[i]/2, line_depart)
+      p.pop()
+    }
+    p.pop()
+
+    if (p.keyIsPressed) {
+      if (p.key == 'j') {
+        effect_size++
+      }
+      if (p.key == 'k') {
+        effect_size--
+      }
+    }
+  }
+  p.keyTyped = function() {
+    if (p.key === ' ') {
+      trial.data.start_length = start_length
+      trial.data.effect_size = effect_size
+      trial.data.rt = p.millis() - nw0;
+      trial.end_trial();
+    };
+  };
+};
+
+
+let p5_trial_experiment_first = {
+  type: jsPsychP5,
+  sketch: experiment_first,
+  // このトライアル用のスケッチ（関数）を指定
+  data: {
+    task: 'trial_first',
+  }
+}
+
+let factors = {
+  colour:[colour_set_black, colour_set_black, colour_set_white_left, colour_set_white_right],
+  angle:[0, 90, 180, 270]
+}
+
+let stimulus_list_first = jsPsych.randomization.factorial(factors,2)
+
+let trial_experiment_first = {
+  timeline: [blanck,
+    p5_trial_experiment_first,
+    blanck],
+  //刺激条件を代入
+  timeline_variables: stimulus_list_first,
+  repetitions: 1,
+  //繰り返しの数
+  //randomize_order: true,
+  //ランダム化するか否か
+};
+
+const end_experiment_first = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus:
+  '次に実験2にうつります',
+  canvas_size: [Canvaswidth,
+    Canvasheight],
+  choices: ['次へ'],
+  data: {
+    task: 'instruction'
+  },
+};
+
+const instruction_before_practice_second = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus:
+  '実験2では、モニターに左に線が3本表示されます。<br>'+
+  'その図形を2:1で分けてください。<br>'+
+  '選択肢は画面右に表示されます。<br>'+
+  '選択は図形に合わせた後、左クリックで選択できます。<br>'+
+  '選択されている図形は円で囲われます。<br>'+
+  '選択が終わったら「スペースキー」を押し、次の試行に進んでください。<br>'+
+  '試行数は32です。<br>'+
+  '何か質問があれば、実験者にお尋ねください。<br>' +
+  '準備ができましたら、練習を始めます。「次へ」を押してください。',
+  canvas_size: [Canvaswidth,
+    Canvasheight],
+  choices: ['次へ'],
+  data: {
+    task: 'instruction'
+  },
+};
+
+start_plactice_second = {
+  timeline: [end_experiment_first,instruction_before_practice_second]
+}
+
+function experiment_plactice_second(p) {
+  // おまじない
+  let trial = jsPsych.getCurrentTrial();
+  // これはタイムラインのデータを拾う（使い方はjsPsychのサイトを参照）。
+  let angle = jsPsych.timelineVariable("angle", true);
+  let colour = jsPsych.timelineVariable("colour", true);
+  
+ p.setup = function() {
+  trial.data.angle = angle,
+  trial.data.colour = colour
+  p.createCanvas(Canvaswidth, Canvasheight);
+  line_length=150*1.5
+  line_depart=100*1.5
+  p.angle=angle/90
+  rect_X=-75*1.5
+  rect_Y=-75*1.5
+  high=0
+  group=0
+  nw0 = p.millis();
+  console.log(stimulus_list_second)
+  //angle=random(angle_set)
+ }
+
+p.draw = function() {
+  p.background(220);
+  p.strokeWeight(4)
+  line_length=150*1.5
+  line_depart=100*1.5
+  p.translate(p.width/4,p.height/2)
+  p.rotate(p.PI*2/4*p.angle)
+    p.push()
+  for(i=0;i<3;i++){
+    p.push()
+    p.rotate(p.PI*2/3*i)
+    p.stroke(colour[i])
+  p.line(-line_length/2,line_depart,line_length/2,line_depart)
+    p.pop()
+  }
+  p.pop()
+  p.rotate(p.PI*2/4*(4-p.angle))
+  p.push()
+  p.pop()
+  
+  p.noFill()
+  p.translate(p.width/2,-p.height/3)
+  p.strokeWeight(2)
+  
+  if(p.angle%2==0){
+    rect_width=150*1.5
+    rect_height=100*1.5
+  }
+  else{
+    rect_width=100*1.5
+    rect_height=150*1.5
+  }
+  if(p.angle==1){
+    rect_X=-25*1.5
+  }
+  if(p.angle==2){
+    rect_Y=-25*1.5
+  }
+    for(ii=0;ii<3;ii++){
+    p.rotate(p.PI*2/4*p.angle)
+    p.push()
+  for(i=0;i<3;i++){
+    p.push()
+    p.rotate(p.PI*2/3*i)
+    p.stroke(colour[i])
+    p.line(-line_length/4,line_depart/2,line_length/4,line_depart/2)
+    p.pop()
+  }
+  p.pop()
+  p.rotate(p.PI*2/4*(4-p.angle))
+    p.rotate(p.PI*2/3*ii)
+    p.rect(rect_X,rect_Y,rect_width,rect_height,30)
+    p.rotate(p.PI*2/3*(3-ii))
+    p.translate(0,p.height/3)
+    }
+
+  p.ellipse(0,-p.height*high/3,200*1.6,200*1.6)
+    if(p.mouseIsPressed&&p.mouseX>p.width/2){
+    if(p.mouseY<p.height/3){
+      group=1
+      high=3
+    }
+    if(p.mouseY<p.height*2/3&&p.mouseY>p.height/3){
+      group=2
+      high=2
+    } 
+    if(p.mouseY>p.height*2/3){
+      group=3
+      high=1
+    }
+   }
+  }
+ p.keyTyped = function() {
+    if (p.key === ' '&&group>0) {
+      trial.data.group = group
+      trial.data.rt = p.millis() - nw0;
+      trial.end_trial();
+    };
+  };
+}
+
+let p5_trial_experiment_plactice_second = {
+  type: jsPsychP5,
+  sketch: experiment_plactice_second,
+  // このトライアル用のスケッチ（関数）を指定
+  data: {
+    task: 'plactice_second',
+  }
+}
+
+let trial_experiment_plactice_second = {
+  timeline: [blanck,
+    p5_trial_experiment_plactice_second,
+    blanck],
+  //刺激条件を代入
+  timeline_variables: stimulus_plactice,
+  repetitions: 1,
+  //繰り返しの数
+  //randomize_order: true,
+  //ランダム化するか否か
+};
+
+function experiment_second(p) {
+  // おまじない
+  let trial = jsPsych.getCurrentTrial();
+  // これはタイムラインのデータを拾う（使い方はjsPsychのサイトを参照）。
+  let angle = jsPsych.timelineVariable("angle", true);
+  let colour = jsPsych.timelineVariable("colour", true);
+  
+ p.setup = function() {
+  trial.data.angle = angle,
+  trial.data.colour = colour
+  p.createCanvas(Canvaswidth, Canvasheight);
+  line_length=150*1.5
+  line_depart=100*1.5
+  p.angle=angle/90
+  rect_X=-75*1.5
+  rect_Y=-75*1.5
+  high=0
+  group=0
+  nw0 = p.millis();
+  console.log(stimulus_list_second)
+  //angle=random(angle_set)
+ }
+
+p.draw = function() {
+  p.background(220);
+  p.strokeWeight(4)
+  line_length=150*1.5
+  line_depart=100*1.5
+  p.translate(p.width/4,p.height/2)
+  p.rotate(p.PI*2/4*p.angle)
+    p.push()
+  for(i=0;i<3;i++){
+    p.push()
+    p.rotate(p.PI*2/3*i)
+    p.stroke(colour[i])
+  p.line(-line_length/2,line_depart,line_length/2,line_depart)
+    p.pop()
+  }
+  p.pop()
+  p.rotate(p.PI*2/4*(4-p.angle))
+  p.push()
+  p.pop()
+  
+  p.noFill()
+  p.translate(p.width/2,-p.height/3)
+  p.strokeWeight(2)
+  
+  if(p.angle%2==0){
+    rect_width=150*1.5
+    rect_height=100*1.5
+  }
+  else{
+    rect_width=100*1.5
+    rect_height=150*1.5
+  }
+  if(p.angle==1){
+    rect_X=-25*1.5
+  }
+  if(p.angle==2){
+    rect_Y=-25*1.5
+  }
+    for(ii=0;ii<3;ii++){
+    p.rotate(p.PI*2/4*p.angle)
+    p.push()
+  for(i=0;i<3;i++){
+    p.push()
+    p.rotate(p.PI*2/3*i)
+    p.stroke(colour[i])
+    p.line(-line_length/4,line_depart/2,line_length/4,line_depart/2)
+    p.pop()
+  }
+  p.pop()
+  p.rotate(p.PI*2/4*(4-p.angle))
+    p.rotate(p.PI*2/3*ii)
+    p.rect(rect_X,rect_Y,rect_width,rect_height,30)
+    p.rotate(p.PI*2/3*(3-ii))
+    p.translate(0,p.height/3)
+    }
+
+  p.ellipse(0,-p.height*high/3,200*1.6,200*1.6)
+    if(p.mouseIsPressed&&p.mouseX>p.width/2){
+    if(p.mouseY<p.height/3){
+      group=1
+      high=3
+    }
+    if(p.mouseY<p.height*2/3&&p.mouseY>p.height/3){
+      group=2
+      high=2
+    } 
+    if(p.mouseY>p.height*2/3){
+      group=3
+      high=1
+    }
+   }
+  }
+ p.keyTyped = function() {
+    if (p.key === ' '&&group>0) {
+      trial.data.group = group
+      trial.data.rt = p.millis() - nw0;
+      trial.end_trial();
+    };
+  };
+}
+
+let p5_trial_experiment_second = {
+  type: jsPsychP5,
+  sketch: experiment_second,
+  // このトライアル用のスケッチ（関数）を指定
+  data: {
+    task: 'trial_second',
+  }
+}
+
+/*let factors_second = {
+  colour:[colour_set_black, colour_set_white_left, colour_set_white_right],
+  angle:[0, 90, 180, 270]
+}*/
+
+let stimulus_list_second = jsPsych.randomization.factorial(factors,2)
+
+let trial_experiment_second = {
+  timeline: [blanck,
+    p5_trial_experiment_second,
+    blanck],
+  //刺激条件を代入
+  timeline_variables: stimulus_list_second,
+  repetitions: 1,
+  //繰り返しの数
+  //randomize_order: true,
+  //ランダム化するか否か
+};
+
+//実験後のお礼
+var inst_closing = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: '<p>実験はすべて終了しました。ご協力ありがとうございました。</p>',
+  prompt: 'そのまま待機してください。5秒経過すると自動でウィンドウサイズがもとに戻ります。',
+  choices: "NO_KEYS",
+  data: {
+    task: 'instruction'
+  },
+  trial_duration: 5000,
+};
+
+jsPsych.run([
+  start_fullscreen,
+  start_plactice_first,
+  trial_experiment_plactice_first,
+  start_experiment,
+  trial_experiment_first,
+  start_plactice_second,
+  trial_experiment_plactice_second,
+  start_experiment,
+  trial_experiment_second,
+  inst_closing,
+  end_fullscreen])
