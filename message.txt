@@ -1,3 +1,5 @@
+<script>
+
 var jsPsych = initJsPsych();
 
 let current_trial_index = 0;
@@ -595,3 +597,5 @@ jsPsych.run([
   trial_experiment_second,
   inst_closing,
   end_fullscreen])
+</script>
+</html>
