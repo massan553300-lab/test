@@ -8,4 +8,4 @@
 5. BCT: https://massan553300-lab.github.io/test/bct_jspsych.html
 6. BCT_kida: https://massan553300-lab.github.io/test/bct_jspsych_ja.html
 7. parsley : https://massan553300-lab.github.io/test/message.html
-8.BCT_repair:https://massan553300-lab.github.io/test/bct_jspsych_re.html
+8. BCT_repair:https://massan553300-lab.github.io/test/bct_jspsych_re.html
