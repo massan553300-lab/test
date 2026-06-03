@@ -269,6 +269,36 @@
       border-radius: 8px;
     }
 
+    .illusion-controls {
+      width: min(620px, 92vw);
+      box-sizing: border-box;
+      background: #f7f7f7;
+      color: #111;
+      border-radius: 10px;
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .illusion-control-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 64px;
+      gap: 12px;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    .illusion-control-row input[type="range"] {
+      width: 100%;
+    }
+
+    .illusion-control-row input[type="color"] {
+      width: 72px;
+      height: 34px;
+      padding: 0;
+    }
+
     .bct-blank {
       min-height: 100vh;
       background: #000;
@@ -747,12 +777,32 @@
         type: jsPsychHtmlKeyboardResponse,
         stimulus: `
           <div class="illusion-screen">
+            <div style="font-size:24px;">カフェウォール錯視</div>
             <canvas id="cafe-wall-canvas" width="600" height="300"></canvas>
+            <div class="illusion-controls">
+              <div class="illusion-control-row">
+                <label for="illusion-offset">ずれの量</label>
+                <input id="illusion-offset" type="range" min="-1" max="1" value="0.5" step="0.01" />
+                <span id="illusion-offset-value">0.50</span>
+              </div>
+              <div class="illusion-control-row">
+                <label for="illusion-line-width">線の太さ</label>
+                <input id="illusion-line-width" type="range" min="0" max="10" value="2" step="0.1" />
+                <span id="illusion-line-width-value">2.0</span>
+              </div>
+              <div class="illusion-control-row">
+                <label for="illusion-line-color">線の色</label>
+                <input id="illusion-line-color" type="color" value="#808080" />
+                <span id="illusion-line-color-value">#808080</span>
+              </div>
+              <div style="text-align:center; margin-top:12px;">
+                <button id="illusion-continue" class="start-button" style="margin-top:0;">BCTに戻る</button>
+              </div>
+            </div>
           </div>
         `,
         choices: 'NO_KEYS',
         response_ends_trial: false,
-        trial_duration: 5000,
         data: {
           trial_type_custom: 'cafe_wall_illusion',
           block_no: blockNo
@@ -767,32 +817,63 @@
           const height = canvas.height;
           const N = 12;
           const Ny = 6;
-          const d = 0.5;
-          const lineWidth = 2;
-          const lineColor = 'rgb(128,128,128)';
 
-          ctx.fillStyle = 'white';
-          ctx.fillRect(0, 0, width, height);
+          const offsetSlider = document.getElementById('illusion-offset');
+          const lineWidthSlider = document.getElementById('illusion-line-width');
+          const colorPicker = document.getElementById('illusion-line-color');
+          const offsetValue = document.getElementById('illusion-offset-value');
+          const lineWidthValue = document.getElementById('illusion-line-width-value');
+          const colorValue = document.getElementById('illusion-line-color-value');
+          const continueButton = document.getElementById('illusion-continue');
 
-          for (let y = 0; y < Ny; y++) {
-            for (let x = -1; x < N + 2; x++) {
-              ctx.fillStyle = x % 2 === 0 ? 'black' : 'white';
-              const offset = y % 2 === 0 ? 0 : d * width / N;
-              ctx.fillRect(
-                (width / N) * x + offset,
-                (height / Ny) * y,
-                width / N,
-                height / Ny
-              );
+          function drawCafeWall() {
+            const d = Number(offsetSlider.value);
+            const lineWidth = Number(lineWidthSlider.value);
+            const lineColor = colorPicker.value;
+
+            offsetValue.textContent = d.toFixed(2);
+            lineWidthValue.textContent = lineWidth.toFixed(1);
+            colorValue.textContent = lineColor;
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let y = 0; y < Ny; y++) {
+              for (let x = -1; x < N + 2; x++) {
+                ctx.fillStyle = x % 2 === 0 ? 'black' : 'white';
+                const offset = y % 2 === 0 ? 0 : d * width / N;
+                ctx.fillRect(
+                  (width / N) * x + offset,
+                  (height / Ny) * y,
+                  width / N,
+                  height / Ny
+                );
+              }
+
+              ctx.strokeStyle = lineColor;
+              ctx.lineWidth = lineWidth;
+              ctx.beginPath();
+              ctx.moveTo(0, (height / Ny) * y);
+              ctx.lineTo(width, (height / Ny) * y);
+              ctx.stroke();
             }
-
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = lineWidth;
-            ctx.beginPath();
-            ctx.moveTo(0, (height / Ny) * y);
-            ctx.lineTo(width, (height / Ny) * y);
-            ctx.stroke();
           }
+
+          offsetSlider.addEventListener('input', drawCafeWall);
+          lineWidthSlider.addEventListener('input', drawCafeWall);
+          colorPicker.addEventListener('input', drawCafeWall);
+          drawCafeWall();
+
+          continueButton.addEventListener('click', function() {
+            jsPsych.finishTrial({
+              trial_type_custom: 'cafe_wall_illusion',
+              block_no: blockNo,
+              illusion_offset: Number(offsetSlider.value),
+              illusion_line_width: Number(lineWidthSlider.value),
+              illusion_line_color: colorPicker.value,
+              elapsed_task_time_s: getElapsedTaskTimeS()
+            });
+          });
         }
       };
     }
