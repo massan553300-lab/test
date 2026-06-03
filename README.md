@@ -11,3 +11,4 @@
 8. BCT_repair:https://massan553300-lab.github.io/test/bct_jspsych_re.html
 9. BCT_instruction_figures : https://massan553300-lab.github.io/test/bct_jspsych_instruction_figures.html
 10. BCT_with_cafewall : https://massan553300-lab.github.io/test/bct_with_cafewall_90sec.html
+11. BCT_with_cafewall_30sec : https://massan553300-lab.github.io/test/bct_with_cafewall_30sec_fixed.html
