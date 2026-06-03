@@ -909,7 +909,7 @@
       });
 
       const totalMs = Math.round(config.duration_min * 60 * 1000);
-      const intervalMs = 90 * 1000;
+      const intervalMs = 30 * 1000;
       let remainingMs = totalMs;
       let blockNo = 1;
 
@@ -994,7 +994,7 @@
             </table>
             <button id="download-raw" class="download-button">raw events CSVを保存</button>
             <button id="download-cycle" class="download-button">cycle summary CSVを保存</button>
-            <button id="download-probe" class="download-button">90秒ごとの回答CSVを保存</button>
+            <button id="download-probe" class="download-button">30秒ごとの回答CSVを保存</button>
             <button id="download-json" class="download-button">完全JSONを保存</button>
             <button id="copy-json" class="copy-button">JSONをクリップボードにコピー</button>
             <div class="warning">
