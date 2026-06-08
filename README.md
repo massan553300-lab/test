@@ -16,4 +16,4 @@
 15. BCT_cafewall_30s : https://massan553300-lab.github.io/test/bct_cafewall_30sec.html
 16. BCT_cafewall_configurable : https://massan553300-lab.github.io/test/bct_cafewall_interval_configurable.html
 17. BCT_mullerlyer : https://massan553300-lab.github.io/test/bct_mullerlyer_interval_configurable.html
-18. BCT_mullerlyer : https://massan553300-lab.github.io/test/bct_mullerlyer_cycle_configurable.html
+18. BCT_mullerlyer_re : https://massan553300-lab.github.io/test/bct_mullerlyer_cycle_configurable.html
