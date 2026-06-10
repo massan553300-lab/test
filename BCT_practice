@@ -26,20 +26,33 @@
       --bg: #000;
 <!--fgに白をいれる-->
       --fg: #fff;
+<!--panel-bgに薄い灰色をいれる-->
       --panel-bg: #f7f7f7;
+<!--panel-fgにほぼ黒をいれる-->
       --panel-fg: #111;
+<!--accentにアクセントカラーをいれる-->
       --accent: #333;
+<!--枠線の色を指定-->
       --border: #d0d0d0;
+<!--mutedに補助的な文字色をいれる-->
       --muted: #666;
+<!--buttonにボタンの背景色を入れる-->
       --button-bg: #111;
+<!--button-fgにボタンの文字色を入れる-->
       --button-fg: #fff;
     }
-
+<!--html と body の両方に同じ設定を適用する-->
     html, body {
+<!--プロパティ（項目名）:値-->
+<!--余白をなくしてください-->
       margin: 0;
+<!--高さを最低でも画面いっぱいにしてください-->
       min-height: 100%;
+<!--使用フォントの候補一覧-->
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+<!--:rootで定義した変数bgを入れている-->
       background: var(--bg);
+<!--:rootで定義した変数fgを入れている-->
       color: var(--fg);
     }
 
