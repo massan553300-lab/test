@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>呼吸カウント課題（BCT）</title>
+  <script src="https://unpkg.com/jspsych@8.2.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-text@2.1.0"></script>
+  <link href="https://unpkg.com/jspsych@8.2.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --panel-bg: #f7f7f7;
+      --panel-fg: #111;
+      --accent: #333;
+      --border: #d0d0d0;
+      --muted: #666;
+      --button-bg: #111;
+      --button-fg: #fff;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    body.config-mode {
+      background: #fff;
+      color: var(--panel-fg);
+    }
+
+    body.task-running {
+      background: #000;
+      color: #fff;
+      cursor: none;
+      overflow: hidden;
+    }
+
+    #config-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      box-sizing: border-box;
+    }
+
+    .config-panel {
+      width: min(760px, 100%);
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    }
+
+    .config-panel h1 {
+      margin: 0 0 12px;
+      font-size: 28px;
+      line-height: 1.4;
+    }
+
+    .config-panel p {
+      margin: 8px 0;
+      line-height: 1.75;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 14px 18px;
+      margin-top: 22px;
+      align-items: center;
+    }
+
+    label {
+      font-weight: 700;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 18px;
+      padding: 10px 12px;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      background: #fff;
+      color: #111;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.6;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    .key-map {
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      line-height: 1.8;
+    }
+
+    .start-button, .download-button, .copy-button {
+      display: inline-block;
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin: 18px 8px 0 0;
+      background: var(--button-bg);
+      color: var(--button-fg);
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .start-button:hover, .download-button:hover, .copy-button:hover {
+      opacity: .86;
+    }
+
+    .bct-screen {
+      min-height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: #fff;
+      padding: 32px;
+      text-align: center;
+      font-size: 30px;
+      line-height: 1.65;
+      white-space: pre-line;
+    }
+
+    .bct-instruction {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+
+
+    /* 教示ページ用：本文は元のまま，上に図だけを追加する */
+    .bct-screen {
+      flex-direction: column;
+      gap: 24px;
+      white-space: normal;
+    }
+
+    .bct-instruction {
+      white-space: pre-line;
+    }
+
+    .bct-screen.with-figure .bct-instruction {
+      font-size: 28px;
+      line-height: 1.55;
+      max-width: 980px;
+    }
+
+    .bct-figure {
+      width: min(620px, 88vw);
+      max-height: 32vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      flex-wrap: wrap;
+      padding: 12px 18px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.18);
+    }
+
+    .bct-figure img {
+      max-width: 100%;
+      max-height: 29vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    .bct-figure.multi img {
+      max-height: 23vh;
+    }
+
+    /* 3ページ目だけは，キー押しの理解が重要なので横長の図を大きく表示する */
+    .bct-screen.instruction-page-3 {
+      gap: 12px;
+      padding: 16px 24px;
+    }
+
+    .bct-screen.instruction-page-3 .bct-instruction {
+      font-size: 22px;
+      line-height: 1.35;
+      max-width: 1050px;
+    }
+
+    .bct-figure.wide {
+      width: min(1180px, 96vw);
+      max-height: 47vh;
+      padding: 0;
+      background: #000;
+      border-radius: 10px;
+      box-shadow: none;
+    }
+
+    .bct-figure.wide img {
+      max-height: 47vh;
+      width: 100%;
+      height: auto;
+    }
+
+
+    .count-probe-screen {
+      min-height: 100vh;
+      box-sizing: border-box;
+      background: #000;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+      font-size: 28px;
+      line-height: 1.7;
+    }
+
+    .count-probe-screen input {
+      font-size: 28px;
+      width: 160px;
+      text-align: center;
+    }
+
+    .illusion-screen {
+      min-height: 100vh;
+      box-sizing: border-box;
+      background: #000;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 22px;
+      padding: 32px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .illusion-screen canvas {
+      background: #fff;
+      max-width: 92vw;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .illusion-controls {
+      width: min(620px, 92vw);
+      box-sizing: border-box;
+      background: #f7f7f7;
+      color: #111;
+      border-radius: 10px;
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .illusion-control-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 64px;
+      gap: 12px;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    .illusion-control-row input[type="range"] {
+      width: 100%;
+    }
+
+    .illusion-control-row input[type="color"] {
+      width: 72px;
+      height: 34px;
+      padding: 0;
+    }
+
+    .bct-blank {
+      min-height: 100vh;
+      background: #000;
+    }
+
+    .export-screen {
+      min-height: 100vh;
+      box-sizing: border-box;
+      background: #fff;
+      color: #111;
+      padding: 32px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .export-panel {
+      width: min(920px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      background: #f7f7f7;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    }
+
+    .export-panel h1 {
+      margin: 0 0 12px;
+      font-size: 26px;
+    }
+
+    .summary-table {
+      border-collapse: collapse;
+      width: 100%;
+      background: #fff;
+      margin-top: 16px;
+    }
+
+    .summary-table th, .summary-table td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    .summary-table th {
+      background: #eeeeee;
+      width: 260px;
+    }
+
+    .warning {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border: 1px solid #b78b00;
+      background: #fff8db;
+      color: #352500;
+      border-radius: 8px;
+      line-height: 1.7;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      background: rgba(0,0,0,.06);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="config-mode">
+  <div id="config-screen">
+    <div class="config-panel">
+      <h1>呼吸カウント課題（Breath-Counting Task）</h1>
+      <p>MATLAB版 <code>BCT.m</code> の挙動を，GitHub Pagesで実行できる単一HTMLとして移植した版です。</p>
+      <p>実験中は黒い画面になります。参加者は呼吸を数えながら，各呼吸に対応するキーを押します。</p>
+
+      <div class="form-grid">
+        <label for="participant-id">参加者ID</label>
+        <input id="participant-id" type="text" autocomplete="off" placeholder="例：S001" />
+
+        <label for="save-code">保存コード</label>
+        <input id="save-code" type="text" autocomplete="off" value="BCT" />
+
+        <label for="total-breath-count-target">総カウント数（終了回数）</label>
+        <input id="total-breath-count-target" type="number" min="1" step="1" value="20" />
+
+        <label for="illusion-interval-count">錯視提示間隔（呼吸回数）</label>
+        <input id="illusion-interval-count" type="number" min="1" step="1" value="5" />
+
+        <label for="cycle-target-count">右矢印を押す回数</label>
+        <input id="cycle-target-count" type="number" min="2" step="1" value="9" />
+
+        <label for="sync-countdown">開始前カウントダウン</label>
+        <div class="checkbox-row">
+          <input id="sync-countdown" type="checkbox" />
+          <span>有効にする（Spaceキー後，3秒カウントダウン）</span>
+        </div>
+
+        <label for="use-fullscreen">全画面表示</label>
+        <div class="checkbox-row">
+          <input id="use-fullscreen" type="checkbox" checked />
+          <span>開始時に全画面表示を試みる</span>
+        </div>
+      </div>
+
+      <div class="key-map">
+        <strong>キー割り当て</strong><br>
+        呼吸カウント 1〜「設定した回数−1」：左矢印キー（←）<br>
+        設定した回数の呼吸：右矢印キー（→）<br>
+        カウントを忘れた場合：Spaceキー<br>
+      </div>
+
+      <p class="note">URLクエリでも設定できます：<code>?participant_id=S001&amp;savecode=PROJECT&amp;total_count=20&amp;interval=5&amp;cycle=9&amp;sync=1</code></p>
+      <button id="start-experiment" class="start-button">実験を開始する</button>
+    </div>
+  </div>
+
+  <div id="jspsych-target"></div>
+
+  <script>
+    const KEY_CONFIG = {
+      count18: 'ArrowLeft',
+      count9: 'ArrowRight',
+      loss: 'Space'
+    };
+
+    let jsPsych;
+    let bctRawEvents = [];
+    let bctProbeResponses = [];
+    let bctIllusionResponses = [];
+    let bctResult = null;
+    let bctTaskStartPerformance = null;
+    let bctTaskStartWallISO = null;
+    let bctKeyHandler = null;
+    let currentConfig = null;
+
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function timestampForFilename(d = new Date()) {
+      return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
+    }
+
+    function normalizeKey(key) {
+      if (key === ' ') return 'Space';
+      if (key === 'Spacebar') return 'Space';
+      return key;
+    }
+
+    function keyLabel(key) {
+      if (key === 'ArrowLeft') return '左矢印キー（←）';
+      if (key === 'ArrowRight') return '右矢印キー（→）';
+      if (key === 'Space') return 'Spaceキー';
+      return key;
+    }
+
+    function escapeCSV(value) {
+      if (value === null || value === undefined) return '';
+      const s = String(value);
+      if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+
+    function rowsToCSV(rows, headers) {
+      const lines = [];
+      lines.push(headers.map(escapeCSV).join(','));
+      for (const row of rows) {
+        lines.push(headers.map(h => escapeCSV(row[h])).join(','));
+      }
+      return lines.join('\n');
+    }
+
+    function downloadText(filename, text, mimeType) {
+      const blob = new Blob([text], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function safeNumber(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    }
+
+    function safeInteger(value, fallback, minValue = 1) {
+      const n = parseInt(value, 10);
+      return Number.isFinite(n) && n >= minValue ? n : fallback;
+    }
+
+    function getConfigFromForm() {
+      return {
+        participant_id: document.getElementById('participant-id').value.trim() || 'anonymous',
+        savecode: document.getElementById('save-code').value.trim() || 'BCT',
+        total_breath_count_target: safeInteger(document.getElementById('total-breath-count-target').value, 20, 1),
+        illusion_interval_count: safeInteger(document.getElementById('illusion-interval-count').value, 5, 1),
+        cycle_target_count: safeInteger(document.getElementById('cycle-target-count').value, 9, 2),
+        sync_countdown: document.getElementById('sync-countdown').checked,
+        use_fullscreen: document.getElementById('use-fullscreen').checked,
+        keys: KEY_CONFIG,
+        html_filename: 'bct_jspsych_ja.html',
+        implementation_note: 'Converted from MATLAB BCT.m to jsPsych/HTML. Data are downloaded locally; GitHub Pages cannot write files to the server without a backend.'
+      };
+    }
+
+    function applyQueryParamsToForm() {
+      const params = new URLSearchParams(window.location.search);
+      const participant = params.get('participant_id') || params.get('participant') || params.get('subjno');
+      const savecode = params.get('savecode');
+      const totalCount = params.get('total_count') || params.get('total_breath_count_target') || params.get('duration') || params.get('duration_min');
+      const interval = params.get('interval') || params.get('illusion_interval') || params.get('illusion_interval_count') || params.get('illusion_interval_sec');
+      const cycleTarget = params.get('cycle') || params.get('cycle_target') || params.get('cycle_target_count') || params.get('target_count');
+      const sync = params.get('sync') || params.get('sync_countdown');
+
+      if (participant) document.getElementById('participant-id').value = participant;
+      if (savecode) document.getElementById('save-code').value = savecode;
+      if (totalCount) document.getElementById('total-breath-count-target').value = totalCount;
+      if (interval) document.getElementById('illusion-interval-count').value = interval;
+      if (cycleTarget) document.getElementById('cycle-target-count').value = cycleTarget;
+      if (sync !== null) document.getElementById('sync-countdown').checked = ['1', 'true', 'yes', 'on'].includes(sync.toLowerCase());
+    }
+
+    function classifyResponseCode(code) {
+      if (code === 1) return 'count_1_to_8';
+      if (code === 2) return 'count_9';
+      if (code === 3) return 'loss_of_count';
+      return 'unknown';
+    }
+
+    function computeCycles(rawEvents, targetCount = 9) {
+      const cycles = [];
+      const endIndices = [];
+
+      rawEvents.forEach((event, idx) => {
+        if (event.resp_code === 2 || event.resp_code === 3) {
+          endIndices.push({ idx, termination_resp_code: event.resp_code });
+        }
+      });
+
+      endIndices.forEach((end, i) => {
+        const startIdx = i === 0 ? 0 : endIndices[i - 1].idx + 1;
+        const endIdx = end.idx;
+        const nPresses = endIdx - startIdx + 1;
+        const terminationTime = rawEvents[endIdx].time_s;
+        const previousBoundaryTime = i === 0 ? 0 : rawEvents[startIdx - 1].time_s;
+        const avgInterval = nPresses > 0 ? (terminationTime - previousBoundaryTime) / nPresses : null;
+        const terminationRespCode = end.termination_resp_code;
+
+        let resultCode = null;
+        let resultLabel = null;
+        if (nPresses === targetCount && terminationRespCode === 2) {
+          resultCode = 1;
+          resultLabel = 'accurate_count';
+        } else if (nPresses !== targetCount && terminationRespCode === 2) {
+          resultCode = 2;
+          resultLabel = 'miscount';
+        } else if (terminationRespCode === 3) {
+          resultCode = 3;
+          resultLabel = 'reset_loss_of_count';
+        }
+
+        cycles.push({
+          cycle_no: i + 1,
+          start_press_no: startIdx + 1,
+          end_press_no: endIdx + 1,
+          n_presses: nPresses,
+          termination_resp_code: terminationRespCode,
+          termination_resp_label: classifyResponseCode(terminationRespCode),
+          termination_time_s: Number(terminationTime.toFixed(6)),
+          avg_keypress_interval_s: Number(avgInterval.toFixed(6)),
+          bct_result_code: resultCode,
+          bct_result_label: resultLabel,
+          removed_single_response_cycle: false
+        });
+      });
+
+      const cutoffThresholdSingleTrial = rawEvents.length ? Math.max(...rawEvents.map(e => e.time_s)) : 0;
+      const removedSingles = cycles.filter(c => c.n_presses === 1 && c.avg_keypress_interval_s < cutoffThresholdSingleTrial);
+      const keptCycles = cycles
+        .filter(c => !(c.n_presses === 1 && c.avg_keypress_interval_s < cutoffThresholdSingleTrial))
+        .map((c, i) => ({ ...c, cycle_no: i + 1 }));
+
+      const numberAcc = keptCycles.filter(c => c.bct_result_code === 1).length;
+      const numberMis = keptCycles.filter(c => c.bct_result_code === 2).length;
+      const numberRes = keptCycles.filter(c => c.bct_result_code === 3).length;
+      const totalTrials = keptCycles.length;
+      const manualCheckRequired = (numberAcc + numberMis + numberRes) !== totalTrials;
+
+      return {
+        cycles_all_before_single_removal: cycles,
+        cycles: keptCycles,
+        singlesremoved: removedSingles.length,
+        singlesremoved_detailed: removedSingles,
+        totaltrials: totalTrials,
+        number_acc: numberAcc,
+        number_mis: numberMis,
+        number_res: numberRes,
+        manualcheck_required: manualCheckRequired ? 1 : 0,
+        cutoffthreshold_singletrial_s: cutoffThresholdSingleTrial
+      };
+    }
+
+
+    function createInstructionTrial(text, choices = ['ArrowRight'], figureIndex = null) {
+      return {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<div class="bct-screen"><div class="bct-instruction">${text}</div></div>`,
+        choices: choices,
+        response_ends_trial: true
+      };
+    }
+
+    function makeInstructions(config) {
+      const totalCountText = `${config.total_breath_count_target || 20}回`;
+      const illusionIntervalText = `${config.illusion_interval_count || 5}回`;
+      const leftKey = keyLabel(config.keys.count18);
+      const rightKey = keyLabel(config.keys.count9);
+      const spaceKey = keyLabel(config.keys.loss);
+      const targetCount = config.cycle_target_count || 9;
+      const leftRangeText = targetCount > 2 ? `1〜${targetCount - 1}` : '1';
+      return [
+        `この課題では，\nご自身の呼吸に注意を向けてください。\n\n鼻の下から上唇の上あたりの空間で，\n息が出入りする動きに気づくようにしてください。\n\n呼吸をコントロールする必要はありません。\n\n自然に呼吸してください。\n\n\n${rightKey}を押すと続きます。`,
+        `途中で，\n注意が呼吸からそれていることに気づくかもしれません。\n\nそれは問題ありません。\n気づいたら，静かに呼吸へ注意を戻してください。\n\n\n${rightKey}を押すと続きます。`,
+        `呼吸への注意を保ちやすくするために，\n注意の一部を使って，\n呼吸を1から${targetCount}まで心の中で数えます。\nこれを繰り返してください。\n\n息を吸って吐くひとまとまりを1カウントとします。\n\nカウントは心の中で小さく唱えてください。\n注意の大部分は，呼吸の感覚に向けたままにしてください。\n\n呼吸${leftRangeText}では，人差し指で${leftKey}を押してください。\n呼吸${targetCount}では，薬指で${rightKey}を押してください。\n\nつまり，各呼吸ごとにキーを1回押します。\n\n\n${rightKey}を押すと続きます。`,
+        `カウントを忘れたことに気づいた場合は，\n\n左手の人差し指で${spaceKey}を押してください。\n\n次の呼吸から，カウントを1として再開できます。\n\n指を使って呼吸を数えないでください。\nカウントは心の中だけで行ってください。\n\n${rightKey}を押すと続きます。`,
+        `背すじを起こし，リラックスした，\n楽な姿勢で座ることを推奨します。\n\n実験中は，目を少なくとも部分的に開け，\n画面上に休ませておいてください。\n\n課題は合計で約${totalCountText}カウントしたら終了します。
+また，約${illusionIntervalText}カウントごとに錯視課題が提示されます。\n\n\n${spaceKey}を押すと開始します。`
+      ];
+    }
+
+    function initializeBCTTracking() {
+      bctRawEvents = [];
+      bctProbeResponses = [];
+      bctIllusionResponses = [];
+      bctResult = null;
+      bctTaskStartPerformance = performance.now();
+      bctTaskStartWallISO = new Date().toISOString();
+    }
+
+    function setupTaskKeyListener(config) {
+      if (!bctTaskStartPerformance) {
+        initializeBCTTracking();
+      }
+      teardownTaskKeyListener();
+
+      bctKeyHandler = function(e) {
+        if (e.repeat) return;
+        const key = normalizeKey(e.key);
+        let respCode = null;
+
+        if (key === config.keys.count18) {
+          respCode = 1;
+        } else if (key === config.keys.count9) {
+          respCode = 2;
+        } else if (key === config.keys.loss) {
+          respCode = 3;
+        } else {
+          return;
+        }
+
+        e.preventDefault();
+        const now = performance.now();
+        const time_s = (now - bctTaskStartPerformance) / 1000;
+        const previous = bctRawEvents.length ? bctRawEvents[bctRawEvents.length - 1] : null;
+        const count = previous && previous.resp_code === 1 ? previous.count + 1 : 1;
+
+        bctRawEvents.push({
+          press_no: bctRawEvents.length + 1,
+          time_s: Number(time_s.toFixed(6)),
+          resp_code: respCode,
+          resp_label: classifyResponseCode(respCode),
+          key: key,
+          count: count,
+          wall_time_iso: new Date().toISOString()
+        });
+      };
+
+      document.addEventListener('keydown', bctKeyHandler, { capture: true });
+    }
+
+    function teardownTaskKeyListener() {
+      if (bctKeyHandler) {
+        document.removeEventListener('keydown', bctKeyHandler, { capture: true });
+        bctKeyHandler = null;
+      }
+    }
+
+
+    function getElapsedTaskTimeS() {
+      if (!bctTaskStartPerformance) return null;
+      return Number(((performance.now() - bctTaskStartPerformance) / 1000).toFixed(6));
+    }
+
+    function latestBCTCount() {
+      if (!bctRawEvents.length) return null;
+      return bctRawEvents[bctRawEvents.length - 1].count;
+    }
+
+    function createBCTBlankTrial(durationMs, blockNo) {
+      return {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-blank"></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        trial_duration: Math.max(1, Math.round(durationMs)),
+        on_load: function() {
+          document.body.classList.add('task-running');
+          setupTaskKeyListener(currentConfig);
+        },
+        on_finish: function(data) {
+          teardownTaskKeyListener();
+          data.trial_type_custom = 'bct_continuous_key_collection_block';
+          data.block_no = blockNo;
+          data.block_duration_ms = Math.round(durationMs);
+          data.elapsed_task_time_s = getElapsedTaskTimeS();
+        }
+      };
+    }
+
+
+    function countBreathPresses() {
+      return bctRawEvents.filter(e => e.resp_code === 1 || e.resp_code === 2).length;
+    }
+
+    function createBCTCountBlockTrial(targetBreathPresses, blockNo) {
+      return {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-blank"></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        on_load: function() {
+          document.body.classList.add('task-running');
+          teardownTaskKeyListener();
+
+          const startBreathPresses = countBreathPresses();
+          const startRawEventIndex = bctRawEvents.length;
+          const targetTotalBreathPresses = startBreathPresses + Math.max(1, Math.round(targetBreathPresses));
+          let ended = false;
+
+          bctKeyHandler = function(e) {
+            if (ended || e.repeat) return;
+            const key = normalizeKey(e.key);
+            let respCode = null;
+
+            if (key === currentConfig.keys.count18) {
+              respCode = 1;
+            } else if (key === currentConfig.keys.count9) {
+              respCode = 2;
+            } else if (key === currentConfig.keys.loss) {
+              respCode = 3;
+            } else {
+              return;
+            }
+
+            e.preventDefault();
+            const now = performance.now();
+            const time_s = (now - bctTaskStartPerformance) / 1000;
+            const previousInBlock = bctRawEvents.length > startRawEventIndex ? bctRawEvents[bctRawEvents.length - 1] : null;
+            const count = previousInBlock && previousInBlock.resp_code === 1 ? previousInBlock.count + 1 : 1;
+
+            bctRawEvents.push({
+              press_no: bctRawEvents.length + 1,
+              time_s: Number(time_s.toFixed(6)),
+              resp_code: respCode,
+              resp_label: classifyResponseCode(respCode),
+              key: key,
+              count: count,
+              block_no: blockNo,
+              wall_time_iso: new Date().toISOString()
+            });
+
+            if ((respCode === 1 || respCode === 2) && countBreathPresses() >= targetTotalBreathPresses) {
+              ended = true;
+              teardownTaskKeyListener();
+              document.body.classList.remove('task-running');
+              setTimeout(() => {
+                jsPsych.finishTrial({
+                  trial_type_custom: 'bct_count_based_key_collection_block',
+                  block_no: blockNo,
+                  block_target_breath_count: Math.max(1, Math.round(targetBreathPresses)),
+                  total_breath_count_so_far: countBreathPresses(),
+                  elapsed_task_time_s: getElapsedTaskTimeS()
+                });
+              }, 0);
+            }
+          };
+
+          document.addEventListener('keydown', bctKeyHandler, { capture: true });
+        },
+        on_finish: function(data) {
+          teardownTaskKeyListener();
+          document.body.classList.remove('task-running');
+          if (!data.trial_type_custom) data.trial_type_custom = 'bct_count_based_key_collection_block';
+          data.block_no = blockNo;
+          data.elapsed_task_time_s = getElapsedTaskTimeS();
+        }
+      };
+    }
+
+    function createCountProbeTrial(blockNo) {
+      return {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-blank"></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        trial_duration: 1,
+        data: { trial_type_custom: 'current_count_probe_removed', block_no: blockNo }
+      };
+    }
+
+    function createMullerLyerIllusionTrial(blockNo) {
+      return {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+          <div class="illusion-screen">
+            <div style="font-size:24px;">ミュラーリヤー錯視</div>
+            <canvas id="muller-lyer-canvas" width="600" height="240"></canvas>
+            <div class="illusion-controls">
+              <div class="illusion-control-row">
+                <label for="illusion-line-color">色</label>
+                <input id="illusion-line-color" type="color" value="#000000" />
+                <span id="illusion-line-color-value">#000000</span>
+              </div>
+              <div class="illusion-control-row">
+                <label for="comparison-line-length">回答線の長さ</label>
+                <input id="comparison-line-length" type="range" min="50" max="450" value="300" step="1" />
+                <span id="comparison-line-length-value">300 px</span>
+              </div>
+              <div style="font-size:14px; line-height:1.6; margin-top:8px;">
+                下側の基準刺激は固定です。上側の斜めの回答線を，基準刺激の横線の長さに合うように調整してください。
+              </div>
+              <div style="text-align:center; margin-top:12px;">
+                <button id="illusion-continue" class="start-button" style="margin-top:0;">息を吐いてBCTに戻る</button>
+              </div>
+            </div>
+          </div>
+        `,
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        data: {
+          trial_type_custom: 'muller_lyer_illusion',
+          block_no: blockNo
+        },
+        on_load: function() {
+          document.body.classList.remove('task-running');
+          teardownTaskKeyListener();
+
+          const canvas = document.getElementById('muller-lyer-canvas');
+          const ctx = canvas.getContext('2d');
+          const colorPicker = document.getElementById('illusion-line-color');
+          const colorValue = document.getElementById('illusion-line-color-value');
+          const comparisonLengthSlider = document.getElementById('comparison-line-length');
+          const comparisonLengthValue = document.getElementById('comparison-line-length-value');
+          const continueButton = document.getElementById('illusion-continue');
+
+          // 基準刺激：横線は固定長，矢羽根は外向き45度で固定
+          const criterionLineLength = 300;
+          const criterionArrowAngleRad = Math.PI / 4;
+          const criterionArrowAngleDeg = 45;
+          const criterionArrowLength = 70;
+
+          // 回答刺激：初期長を各試行でランダム化し，斜めに表示
+          const responseStartLengths = [150, 200, 250, 300, 350];
+          const responseStartLength = responseStartLengths[
+            Math.floor(Math.random() * responseStartLengths.length)
+          ];
+          const responseLineAngleRad = -Math.PI / 12; // -15度
+          const responseLineAngleDeg = Number((responseLineAngleRad * 180 / Math.PI).toFixed(3));
+
+          comparisonLengthSlider.value = responseStartLength;
+
+          function drawMullerLyer() {
+            const lineColor = colorPicker.value;
+            const responseLength = Number(comparisonLengthSlider.value);
+            const centerX = canvas.width / 2;
+            const responseY = 65;
+            const baseY = 165;
+
+            // 回答刺激：斜めの線
+            const responseDx = (responseLength / 2) * Math.cos(responseLineAngleRad);
+            const responseDy = (responseLength / 2) * Math.sin(responseLineAngleRad);
+
+            // 基準刺激：固定長の水平線
+            const x1 = centerX - criterionLineLength / 2;
+            const x2 = centerX + criterionLineLength / 2;
+
+            // 外向き45度の矢羽根
+            const arrowDx = criterionArrowLength * Math.cos(criterionArrowAngleRad);
+            const arrowDy = criterionArrowLength * Math.sin(criterionArrowAngleRad);
+
+            colorValue.textContent = lineColor;
+            comparisonLengthValue.textContent = responseLength.toFixed(0) + ' px';
+
+            ctx.fillStyle = 'rgb(220,220,220)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+
+            // 上側の回答刺激：参加者が長さを調整する斜め線
+            ctx.beginPath();
+            ctx.moveTo(centerX - responseDx, responseY - responseDy);
+            ctx.lineTo(centerX + responseDx, responseY + responseDy);
+            ctx.stroke();
+
+            // 下側の基準刺激：水平線は固定長
+            ctx.beginPath();
+            ctx.moveTo(x1, baseY);
+            ctx.lineTo(x2, baseY);
+            ctx.stroke();
+
+            // 基準刺激の矢羽根：外向き45度で固定
+            ctx.beginPath();
+            ctx.moveTo(x1, baseY);
+            ctx.lineTo(x1 - arrowDx, baseY + arrowDy);
+            ctx.moveTo(x1, baseY);
+            ctx.lineTo(x1 - arrowDx, baseY - arrowDy);
+
+            ctx.moveTo(x2, baseY);
+            ctx.lineTo(x2 + arrowDx, baseY - arrowDy);
+            ctx.moveTo(x2, baseY);
+            ctx.lineTo(x2 + arrowDx, baseY + arrowDy);
+            ctx.stroke();
+          }
+
+          colorPicker.addEventListener('input', drawMullerLyer);
+          comparisonLengthSlider.addEventListener('input', drawMullerLyer);
+          drawMullerLyer();
+
+          continueButton.addEventListener('click', function() {
+            const finalResponseLength = Number(comparisonLengthSlider.value);
+            const row = {
+              illusion_no: bctIllusionResponses.length + 1,
+              after_block_no: blockNo,
+              elapsed_task_time_s: getElapsedTaskTimeS(),
+              illusion_type: 'muller_lyer',
+              line_color: colorPicker.value,
+
+              // 互換性のため，従来の angle_* には基準刺激の矢羽根角度を記録
+              angle_rad: Number(criterionArrowAngleRad.toFixed(6)),
+              angle_deg: criterionArrowAngleDeg,
+
+              response_start_length_px: responseStartLength,
+              response_line_angle_rad: Number(responseLineAngleRad.toFixed(6)),
+              response_line_angle_deg: responseLineAngleDeg,
+              comparison_line_length_px: finalResponseLength,
+
+              true_muller_line_length_px: criterionLineLength,
+              criterion_line_length_px: criterionLineLength,
+              criterion_arrow_angle_rad: Number(criterionArrowAngleRad.toFixed(6)),
+              criterion_arrow_angle_deg: criterionArrowAngleDeg,
+              criterion_arrow_direction: 'outward',
+
+              adjustment_error_px: Number((finalResponseLength - criterionLineLength).toFixed(3)),
+              yabane_visible: true,
+              wall_time_iso: new Date().toISOString()
+            };
+            bctIllusionResponses.push(row);
+            jsPsych.finishTrial({
+              trial_type_custom: 'muller_lyer_illusion',
+              block_no: blockNo,
+              illusion_type: row.illusion_type,
+              line_color: row.line_color,
+              angle_rad: row.angle_rad,
+              angle_deg: row.angle_deg,
+              response_start_length_px: row.response_start_length_px,
+              response_line_angle_rad: row.response_line_angle_rad,
+              response_line_angle_deg: row.response_line_angle_deg,
+              comparison_line_length_px: row.comparison_line_length_px,
+              true_muller_line_length_px: row.true_muller_line_length_px,
+              criterion_line_length_px: row.criterion_line_length_px,
+              criterion_arrow_angle_rad: row.criterion_arrow_angle_rad,
+              criterion_arrow_angle_deg: row.criterion_arrow_angle_deg,
+              criterion_arrow_direction: row.criterion_arrow_direction,
+              adjustment_error_px: row.adjustment_error_px,
+              yabane_visible: row.yabane_visible,
+              elapsed_task_time_s: row.elapsed_task_time_s
+            });
+          });
+        }
+      };
+    }
+
+    function createResumeInstructionTrial(blockNo) {
+      return {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-blank"></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        trial_duration: 1,
+        data: { trial_type_custom: 'resume_instruction_removed', block_no: blockNo }
+      };
+    }
+
+    function buildProbeRows(result) {
+      return result.probe_responses.map(p => ({
+        participant_id: result.config.participant_id,
+        savecode: result.config.savecode,
+        total_breath_count_target: result.config.total_breath_count_target,
+        illusion_interval_count: result.config.illusion_interval_count || 5,
+        cycle_target_count: result.config.cycle_target_count || 9,
+        task_start_wall_iso: result.task_start_wall_iso,
+        probe_no: p.probe_no,
+        after_block_no: p.after_block_no,
+        elapsed_task_time_s: p.elapsed_task_time_s,
+        participant_reported_count: p.participant_reported_count,
+        latest_recorded_bct_count: p.latest_recorded_bct_count,
+        wall_time_iso: p.wall_time_iso
+      }));
+    }
+
+
+
+    function buildIllusionRows(result) {
+      return (result.illusion_responses || []).map(p => ({
+        participant_id: result.config.participant_id,
+        savecode: result.config.savecode,
+        total_breath_count_target: result.config.total_breath_count_target,
+        illusion_interval_count: result.config.illusion_interval_count || 5,
+        cycle_target_count: result.config.cycle_target_count || 9,
+        task_start_wall_iso: result.task_start_wall_iso,
+        illusion_no: p.illusion_no,
+        after_block_no: p.after_block_no,
+        elapsed_task_time_s: p.elapsed_task_time_s,
+        illusion_type: p.illusion_type,
+        line_color: p.line_color,
+        angle_rad: p.angle_rad,
+        angle_deg: p.angle_deg,
+        response_start_length_px: p.response_start_length_px,
+        response_line_angle_rad: p.response_line_angle_rad,
+        response_line_angle_deg: p.response_line_angle_deg,
+        comparison_line_length_px: p.comparison_line_length_px,
+        true_muller_line_length_px: p.true_muller_line_length_px,
+        criterion_line_length_px: p.criterion_line_length_px,
+        criterion_arrow_angle_rad: p.criterion_arrow_angle_rad,
+        criterion_arrow_angle_deg: p.criterion_arrow_angle_deg,
+        criterion_arrow_direction: p.criterion_arrow_direction,
+        adjustment_error_px: p.adjustment_error_px,
+        yabane_visible: p.yabane_visible,
+        wall_time_iso: p.wall_time_iso
+      }));
+    }
+
+    function buildRawRows(result) {
+      return result.raw_events.map(e => ({
+        participant_id: result.config.participant_id,
+        savecode: result.config.savecode,
+        total_breath_count_target: result.config.total_breath_count_target,
+        illusion_interval_count: result.config.illusion_interval_count || 5,
+        cycle_target_count: result.config.cycle_target_count || 9,
+        task_start_wall_iso: result.task_start_wall_iso,
+        press_no: e.press_no,
+        time_s: e.time_s,
+        resp_code: e.resp_code,
+        resp_label: e.resp_label,
+        key: e.key,
+        count: e.count,
+        wall_time_iso: e.wall_time_iso
+      }));
+    }
+
+    function buildCycleRows(result) {
+      return result.output.cycles.map(c => ({
+        participant_id: result.config.participant_id,
+        savecode: result.config.savecode,
+        total_breath_count_target: result.config.total_breath_count_target,
+        illusion_interval_count: result.config.illusion_interval_count || 5,
+        cycle_target_count: result.config.cycle_target_count || 9,
+        task_start_wall_iso: result.task_start_wall_iso,
+        cycle_no: c.cycle_no,
+        start_press_no: c.start_press_no,
+        end_press_no: c.end_press_no,
+        n_presses: c.n_presses,
+        termination_resp_code: c.termination_resp_code,
+        termination_resp_label: c.termination_resp_label,
+        termination_time_s: c.termination_time_s,
+        avg_keypress_interval_s: c.avg_keypress_interval_s,
+        bct_result_code: c.bct_result_code,
+        bct_result_label: c.bct_result_label
+      }));
+    }
+
+    function finishTaskTrial(data, config) {
+      teardownTaskKeyListener();
+      document.body.classList.remove('task-running');
+
+      const output = computeCycles(bctRawEvents, config.cycle_target_count || 9);
+      const taskEndWallISO = new Date().toISOString();
+      bctResult = {
+        experiment: 'Breath-Counting Task',
+        implementation: 'BCT.m converted to jsPsych/HTML, Japanese instructions',
+        jspsych_version: '8.2.3',
+        config: config,
+        task_start_wall_iso: bctTaskStartWallISO,
+        task_end_wall_iso: taskEndWallISO,
+        raw_events: bctRawEvents,
+        probe_responses: bctProbeResponses,
+        illusion_responses: bctIllusionResponses,
+        dataheaders_original_matlab: ['time', 'resp', 'count'],
+        output: output
+      };
+
+      try {
+        localStorage.setItem(`bct_backup_${config.participant_id}_${timestampForFilename()}`, JSON.stringify(bctResult));
+      } catch (err) {
+        console.warn('localStorage backup failed:', err);
+      }
+
+      data.trial_type_custom = 'bct_continuous_key_collection';
+      data.task_start_wall_iso = bctTaskStartWallISO;
+      data.task_end_wall_iso = taskEndWallISO;
+      data.participant_id = config.participant_id;
+      data.savecode = config.savecode;
+      data.total_breath_count_target = config.total_breath_count_target;
+      data.illusion_interval_count = config.illusion_interval_count;
+      data.cycle_target_count = config.cycle_target_count || 9;
+      data.raw_events_json = JSON.stringify(bctRawEvents);
+      data.probe_responses_json = JSON.stringify(bctProbeResponses);
+      data.illusion_responses_json = JSON.stringify(bctIllusionResponses);
+      data.cycles_json = JSON.stringify(output.cycles);
+      data.total_keypresses = bctRawEvents.length;
+      data.totaltrials = output.totaltrials;
+      data.number_acc = output.number_acc;
+      data.number_mis = output.number_mis;
+      data.number_res = output.number_res;
+      data.singlesremoved = output.singlesremoved;
+      data.manualcheck_required = output.manualcheck_required;
+    }
+
+    function buildTimeline(config) {
+      const timeline = [];
+      const instructions = makeInstructions(config);
+      for (let i = 0; i < instructions.length; i++) {
+        timeline.push(createInstructionTrial(instructions[i], i === instructions.length - 1 ? [' '] : ['ArrowRight'], i));
+      }
+
+      if (config.sync_countdown) {
+        timeline.push(createInstructionTrial(`息を吸い，${keyLabel(config.keys.loss)}を押すと開始前カウントダウンに入ります。\n\n3秒カウントダウン`, [' ']));
+        [3, 2, 1].forEach(n => {
+          timeline.push({
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `<div class="bct-screen"><div class="bct-instruction">息を吐いてください\n\n${n}</div></div>`,
+            choices: 'NO_KEYS',
+            response_ends_trial: false,
+            trial_duration: 1000
+          });
+        });
+      }
+
+      timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-blank"></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        trial_duration: 1,
+        on_load: function() {
+          initializeBCTTracking();
+        }
+      });
+
+      const totalBreathTarget = Math.max(1, Math.round(config.total_breath_count_target || 20));
+      const illusionIntervalCount = Math.max(1, Math.round(config.illusion_interval_count || 5));
+      let remainingBreathCount = totalBreathTarget;
+      let blockNo = 1;
+
+      while (remainingBreathCount > 0) {
+        const blockBreathCount = Math.min(illusionIntervalCount, remainingBreathCount);
+        timeline.push(createBCTCountBlockTrial(blockBreathCount, blockNo));
+        remainingBreathCount -= blockBreathCount;
+
+        if (remainingBreathCount > 0) {
+          timeline.push(createMullerLyerIllusionTrial(blockNo));
+        }
+
+        blockNo++;
+      }
+
+      timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-blank"></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        trial_duration: 1,
+        on_load: function() {
+          finishTaskTrial({}, config);
+        }
+      });
+
+      timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div class="bct-screen"><div class="bct-instruction">課題は終了しました。\n\nデータ保存画面に移動します。</div></div>',
+        choices: 'NO_KEYS',
+        response_ends_trial: false,
+        trial_duration: 1000
+      });
+
+      return timeline;
+    }
+
+    function showExportScreen() {
+      document.body.classList.remove('task-running');
+      document.body.classList.add('config-mode');
+      teardownTaskKeyListener();
+
+      const target = document.getElementById('jspsych-target');
+      const result = bctResult;
+
+      if (!result) {
+        target.innerHTML = '<div class="export-screen"><div class="export-panel"><h1>データがありません</h1><p>課題データを生成できませんでした。</p></div></div>';
+        return;
+      }
+
+      const baseName = `BCT_${sanitizeFilename(result.config.savecode)}_${sanitizeFilename(result.config.participant_id)}_${timestampForFilename()}`;
+      const rawRows = buildRawRows(result);
+      const cycleRows = buildCycleRows(result);
+      const probeRows = buildProbeRows(result);
+      const illusionRows = buildIllusionRows(result);
+      const rawHeaders = ['participant_id','savecode','total_breath_count_target','illusion_interval_count','cycle_target_count','task_start_wall_iso','press_no','time_s','resp_code','resp_label','key','count','wall_time_iso'];
+      const cycleHeaders = ['participant_id','savecode','total_breath_count_target','illusion_interval_count','cycle_target_count','task_start_wall_iso','cycle_no','start_press_no','end_press_no','n_presses','termination_resp_code','termination_resp_label','termination_time_s','avg_keypress_interval_s','bct_result_code','bct_result_label'];
+      const probeHeaders = ['participant_id','savecode','total_breath_count_target','illusion_interval_count','cycle_target_count','task_start_wall_iso','probe_no','after_block_no','elapsed_task_time_s','participant_reported_count','latest_recorded_bct_count','wall_time_iso'];
+      const illusionHeaders = ['participant_id','savecode','total_breath_count_target','illusion_interval_count','cycle_target_count','task_start_wall_iso','illusion_no','after_block_no','elapsed_task_time_s','illusion_type','line_color','angle_rad','angle_deg','response_start_length_px','response_line_angle_rad','response_line_angle_deg','comparison_line_length_px','true_muller_line_length_px','criterion_line_length_px','criterion_arrow_angle_rad','criterion_arrow_angle_deg','criterion_arrow_direction','adjustment_error_px','yabane_visible','wall_time_iso'];
+      const rawCSV = rowsToCSV(rawRows, rawHeaders);
+      const cycleCSV = rowsToCSV(cycleRows, cycleHeaders);
+      const probeCSV = rowsToCSV(probeRows, probeHeaders);
+      const illusionCSV = rowsToCSV(illusionRows, illusionHeaders);
+      const jsonText = JSON.stringify(result, null, 2);
+
+      target.innerHTML = `
+        <div class="export-screen">
+          <div class="export-panel">
+            <h1>課題終了</h1>
+            <p>GitHub Pages単体ではサーバー側保存はできないため，この画面からデータをダウンロードしてください。ブラウザのlocalStorageにもバックアップを試みています。</p>
+            <table class="summary-table">
+              <tbody>
+                <tr><th>参加者ID</th><td>${escapeHTML(result.config.participant_id)}</td></tr>
+                <tr><th>保存コード</th><td>${escapeHTML(result.config.savecode)}</td></tr>
+                <tr><th>総カウント数</th><td>${result.config.total_breath_count_target || 20}回</td></tr>
+                <tr><th>錯視提示間隔</th><td>${result.config.illusion_interval_count || 5}カウントごと</td></tr>
+                <tr><th>右矢印を押す回数</th><td>${result.config.cycle_target_count || 9}回目</td></tr>
+                <tr><th>総キー押し数</th><td>${result.raw_events.length}</td></tr>
+                <tr><th>サイクル数</th><td>${result.output.totaltrials}</td></tr>
+                <tr><th>正確な設定カウント</th><td>${result.output.number_acc}</td></tr>
+                <tr><th>誤カウント</th><td>${result.output.number_mis}</td></tr>
+                <tr><th>リセット</th><td>${result.output.number_res}</td></tr>
+                <tr><th>単独反応サイクル除外数</th><td>${result.output.singlesremoved}</td></tr>
+                <tr><th>手動確認フラグ</th><td>${result.output.manualcheck_required}</td></tr>
+              </tbody>
+            </table>
+            <button id="download-raw" class="download-button">raw events CSVを保存</button>
+            <button id="download-cycle" class="download-button">cycle summary CSVを保存</button>
+            <button id="download-probe" class="download-button">カウント確認CSVを保存</button>
+            <button id="download-illusion" class="download-button">錯視調整CSVを保存</button>
+            <button id="download-json" class="download-button">完全JSONを保存</button>
+            <button id="copy-json" class="copy-button">JSONをクリップボードにコピー</button>
+            <div class="warning">
+              注意：ブラウザを閉じる前に必ずCSVまたはJSONを保存してください。サーバー送信が必要な場合は，OSF・Google Apps Script・Firebase等の受信先を別途実装する必要があります。
+            </div>
+          </div>
+        </div>`;
+
+      document.getElementById('download-raw').addEventListener('click', () => {
+        downloadText(`${baseName}_raw_events.csv`, '\ufeff' + rawCSV, 'text/csv;charset=utf-8');
+      });
+      document.getElementById('download-cycle').addEventListener('click', () => {
+        downloadText(`${baseName}_cycle_summary.csv`, '\ufeff' + cycleCSV, 'text/csv;charset=utf-8');
+      });
+      document.getElementById('download-probe').addEventListener('click', () => {
+        downloadText(`${baseName}_count_probes.csv`, '\ufeff' + probeCSV, 'text/csv;charset=utf-8');
+      });
+      document.getElementById('download-illusion').addEventListener('click', () => {
+        downloadText(`${baseName}_muller_lyer_adjustments.csv`, '\ufeff' + illusionCSV, 'text/csv;charset=utf-8');
+      });
+      document.getElementById('download-json').addEventListener('click', () => {
+        downloadText(`${baseName}_complete.json`, jsonText, 'application/json;charset=utf-8');
+      });
+      document.getElementById('copy-json').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(jsonText);
+          alert('JSONをクリップボードにコピーしました。');
+        } catch (err) {
+          alert('コピーに失敗しました。JSONファイルとして保存してください。');
+        }
+      });
+    }
+
+    function sanitizeFilename(s) {
+      return String(s || 'unknown').replace(/[\\/:*?"<>|\s]+/g, '_').replace(/^_+|_+$/g, '');
+    }
+
+    function escapeHTML(s) {
+      return String(s).replace(/[&<>'"]/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[ch]));
+    }
+
+    async function startExperiment() {
+      currentConfig = getConfigFromForm();
+      document.getElementById('config-screen').style.display = 'none';
+      document.body.classList.remove('config-mode');
+
+      if (currentConfig.use_fullscreen && document.documentElement.requestFullscreen) {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch (err) {
+          console.warn('Fullscreen request failed:', err);
+        }
+      }
+
+      jsPsych = initJsPsych({
+        display_element: 'jspsych-target',
+        on_finish: showExportScreen
+      });
+
+      jsPsych.run(buildTimeline(currentConfig));
+    }
+
+    applyQueryParamsToForm();
+    document.getElementById('start-experiment').addEventListener('click', startExperiment);
+  </script>
+</body>
+</html>
